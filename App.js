@@ -123,12 +123,12 @@ export default function App() {
   }, []);
 
   return (
-    <ApiProvider>
-      <SocketProvider>
-        <UserProvider>
-          <ChatProvider>
-            <SafeAreaProvider>
-              <ToastProvider>
+    <ToastProvider>
+      <ApiProvider>
+        <SocketProvider>
+          <UserProvider>
+            <ChatProvider>
+              <SafeAreaProvider>
                 <MenuProvider>
                   <NavigationContainer
                     linking={linking}
@@ -283,11 +283,11 @@ export default function App() {
                   </NavigationContainer>
                   <Toast ref={ref => (global['toast'] = ref)} />
                 </MenuProvider>
-              </ToastProvider>
-            </SafeAreaProvider>
-          </ChatProvider>
-        </UserProvider>
-      </SocketProvider>
-    </ApiProvider>
+              </SafeAreaProvider>
+            </ChatProvider>
+          </UserProvider>
+        </SocketProvider>
+      </ApiProvider>
+    </ToastProvider>
   );
 }

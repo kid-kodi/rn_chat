@@ -1072,7 +1072,7 @@ PODS:
   - React-Mapbuffer (0.73.0):
     - glog
     - React-debug
-  - react-native-contacts (7.0.8):
+  - react-native-contacts (8.0.4):
     - React-Core
   - react-native-document-picker (9.3.1):
     - glog
@@ -1665,7 +1665,7 @@ SPEC CHECKSUMS:
   React-jsinspector: 9f6fb9ed9f03a0fb961ab8dc2e0e0ee0dc729e77
   React-logger: 008caec0d6a587abc1e71be21bfac5ba1662fe6a
   React-Mapbuffer: 58fe558faf52ecde6705376700f848d0293d1cef
-  react-native-contacts: cb4f3b823550adbce0802901b9e63bf1526ec0af
+  react-native-contacts: cdeb7709dcc626e5fd7ee3d3e3685357e877cbd5
   react-native-document-picker: cbc63d9c5deb5a698744cd9072e238414fd82328
   react-native-orientation-locker: 5819fd23ca89cbac0d736fb4314745f62716d517
   react-native-restart: 7595693413fe3ca15893702f2c8306c62a708162
@@ -1715,6 +1715,6 @@ SPEC CHECKSUMS:
   TOCropViewController: 80b8985ad794298fb69d3341de183f33d1853654
   Yoga: 20d6a900dcc8d61d5e3b799bbf627cc34474a8c4
 
-PODFILE CHECKSUM: 33038828e4ba60acf2993de3f9dbafefb3a5e632
+PODFILE CHECKSUM: 370c12f40b9e4779850d4e5b923c5831def5d24d
 
 COCOAPODS: 1.16.2

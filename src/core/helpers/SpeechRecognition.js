@@ -13,7 +13,7 @@ const me = 'Moi';
 
 export class SpeechRecognition {
   // recognizerEventEmitter = new NativeEventEmitter(Recognizer);
-  recognizerEventEmitter = new NativeEventEmitter();
+  // recognizerEventEmitter = new NativeEventEmitter();
   working = null;
   sentenceEnded = null;
   currentSpeechTimestamp = null;
@@ -26,13 +26,13 @@ export class SpeechRecognition {
     this.speechCallbacks = new Map();
     this.speechTextStorage = [];
     this.speakingSpeechTexts = new Map();
-    this.recognizerEventEmitter.addListener(
-      'onRecognizerResult',
-      this.onRecognizerResult,
-    );
-    this.recognizerEventEmitter.addListener('onRecognizerError', err => {
-      console.error(err);
-    });
+    // this.recognizerEventEmitter.addListener(
+    //   'onRecognizerResult',
+    //   this.onRecognizerResult,
+    // );
+    // this.recognizerEventEmitter.addListener('onRecognizerError', err => {
+    //   console.error(err);
+    // });
     this.working = false;
     this.sentenceEnded = true;
   }

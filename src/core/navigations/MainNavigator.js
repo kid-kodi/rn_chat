@@ -35,6 +35,16 @@ function TabNavigator({navigation}) {
         }}
       />
       <Tab.Screen
+        name="CHATLIST"
+        component={ChatList}
+        options={{
+          tabBarLabel: 'Contacts',
+          tabBarIcon: ({color, size}) => (
+            <Icon name="chatbubble-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
         name="SETTINGS"
         component={Settings}
         options={{

@@ -46,7 +46,7 @@ const MyStreamWindow = ({
 }) => {
   return (
     <View style={{flex: 1}}>
-      <UserLabel text={MeetingVariable.myName} />
+      <UserLabel text={MeetingVariable?.myName} />
       {myStream ? (
         <RTCView
           mirror={frontCam && !shareScreen}
@@ -55,7 +55,7 @@ const MyStreamWindow = ({
           streamURL={myStream.toURL()}
         />
       ) : (
-        <MyPic style={rtcViewStyle} imgSrc={config_key.avatarUri} />
+        <MyPic style={rtcViewStyle} imgSrc={config_key?.avatarUri} />
       )}
     </View>
   );

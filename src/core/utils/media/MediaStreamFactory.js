@@ -34,7 +34,7 @@ export class MediaStreamFactory {
 
           returned = true;
           if (this.updated) {
-            console.log('[Log]  Device info updated');
+            console.log('[Log]1  Device info updated');
             resolve();
           } else {
             reject('Device info update failed');

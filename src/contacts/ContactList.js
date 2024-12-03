@@ -66,11 +66,15 @@ export default function ContactList() {
               },
             ).then(value => {
               if (value === 'granted') {
-                Contacts.getAll().then(setContacts);
+                Contacts.getAll().then((contacts) => {
+                  setContacts(contacts)
+                });
               }
             });
           } else {
-            Contacts.getAll().then(setContacts);
+            Contacts.getAll().then((contacts) => {
+              setContacts(contacts)
+            });
           }
         } catch (err) {
           setError(err);

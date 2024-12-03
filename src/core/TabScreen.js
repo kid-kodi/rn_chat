@@ -27,7 +27,7 @@ export default function TabScreen() {
             ),
           }}
         />
-        {/* <Tab.Screen
+        <Tab.Screen
           name="CONTACTS"
           component={ContactList}
           options={{
@@ -36,7 +36,7 @@ export default function TabScreen() {
               <Icon name="people-outline" size={size} color={color} />
             ),
           }}
-        /> */}
+        />
 
         <Tab.Screen
           name="SETTINGS"

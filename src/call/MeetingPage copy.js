@@ -17,7 +17,7 @@ import {MyAlert} from '../core/components/MyAlert';
 import {TextButton} from '../core/components/MyButton';
 import CheckBox from '@react-native-community/checkbox';
 import {useApi} from '../core/contexts/ApiProvider';
-import CallKeepImpl from '../core/utils/CallKeepImpl';
+// import CallKeepImpl from '../core/utils/CallKeepImpl';
 
 export default function MeetingPage({navigation, route}) {
   const api = useApi();
@@ -117,7 +117,6 @@ export default function MeetingPage({navigation, route}) {
           await openMicrophone();
         }
       } catch (e) {
-        console.log(e)
         toast.show(e, {type: 'danger', duration: 1300, placement: 'top'});
       }
     })();
@@ -168,7 +167,7 @@ export default function MeetingPage({navigation, route}) {
   };
 
   const openMicrophone = async () => {
-    // MeetingVariable.speechRecognition.start();
+    MeetingVariable.speechRecognition.start();
     setMicroStat('loading');
     try {
       const micStream = await MeetingVariable.mediaStreamFactory.getMicStream();
@@ -187,7 +186,7 @@ export default function MeetingPage({navigation, route}) {
   };
 
   const closeMicrophone = async () => {
-    // MeetingVariable.speechRecognition.stop();
+    MeetingVariable.speechRecognition.stop();
     setMicroStat('loading');
     try {
       if (myMicrophoneStream.getAudioTracks().length === 0) return;
@@ -418,12 +417,12 @@ export default function MeetingPage({navigation, route}) {
       }
 
       clearMeetingVariable();
-      CallKeepImpl.endIncomingcallAnswer();
+      // CallKeepImpl.endIncomingcallAnswer();
       navigation.navigate('TAB');
     } catch (e) {
       toast.show(e, {type: 'danger', duration: 1300, placement: 'top'});
       MeetingVariable.messages = [];
-      CallKeepImpl.endIncomingcallAnswer();
+      // CallKeepImpl.endIncomingcallAnswer();
       navigation.navigate('TAB');
     }
   };

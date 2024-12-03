@@ -100,16 +100,17 @@ export default function Chat({navigation, route}) {
 
   const initiateCall = async data => {
     await api.post(`/api/call/initiate-call`, data);
-    CallKeepImpl.startCall({
-      handle: data.callee.fullName,
-      localizedCallerName: data.callee.fullName,
-    });
+    
+    // CallKeepImpl.startCall({
+    //   handle: data.callee.fullName,
+    //   localizedCallerName: data.callee.fullName,
+    // });
     navigation.navigate('CALL', {
       chatId: data.chatId,
       cameraStatus: data.cameraStatus,
       microphoneStatus:  data.microphoneStatus,
     });
-    CallKeepImpl.backToForeground()
+    // CallKeepImpl.backToForeground()
     return false;
   };
 

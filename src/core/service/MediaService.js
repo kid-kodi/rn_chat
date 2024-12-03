@@ -159,7 +159,7 @@ export class MediaService {
   }
 
   joinMeeting(chatId, user) {
-    MeetingVariable?.speechRecognition?.clear();
+    // MeetingVariable?.speechRecognition?.clear();
     return this._joinMeeting(
       false,
       chatId,

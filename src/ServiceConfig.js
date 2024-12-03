@@ -2,7 +2,7 @@ import {BASE_API_URL} from '@env';
 
 const config = {
   // serverIp: 'api.solisalim.com',
-  serverIp: '192.168.1.4',
+  serverIp: '172.20.10.12',
   serverPort: 5000,
   serverUseHttps: false,
 };
