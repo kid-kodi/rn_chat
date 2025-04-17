@@ -1,10 +1,8 @@
 import {BASE_API_URL} from '@env';
 
 const config = {
-  // serverIp: 'api.solisalim.com',
-  serverIp: '172.20.10.12',
+  serverIp: BASE_API_URL,
   serverPort: 5000,
-  serverUseHttps: false,
 };
 
 export const iflytekAPPID = 'YourAPPID';
@@ -15,8 +13,7 @@ export const SIMULCASTENCODING = [
   {maxBitrate: 700000},
 ];
 
-const _serverURL = 'http://' + config.serverIp + ':' + config.serverPort;
-// const _serverURL = 'http://' + config.serverIp;
+const _serverURL = config.serverIp;
 
 export const fileUploadURL = userToken => {
   return `${BASE_API_URL}/api/files?token=${userToken}`;
