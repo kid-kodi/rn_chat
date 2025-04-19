@@ -39,22 +39,22 @@ export default function ChatList({navigation}) {
   const [unReadMessages, setUnreadMessages] = useState([]);
   const [users, setUsers] = useState([]);
 
-  useEffect(() => {
-    navigation.setOptions({
-      headerTitle: 'Solisakane',
-      headerRight: () => {
-        return (
-          <HeaderButtons HeaderButtonComponent={CustomHeaderButton}>
-            <Item
-              title="Nouvelle conversation"
-              iconName="plus-circle"
-              onPress={() => navigation.navigate('NEWCHAT')}
-            />
-          </HeaderButtons>
-        );
-      },
-    });
-  }, []);
+  // useEffect(() => {
+  //   navigation.setOptions({
+  //     headerTitle: 'Solisakane',
+  //     headerRight: () => {
+  //       return (
+  //         <HeaderButtons HeaderButtonComponent={CustomHeaderButton}>
+  //           <Item
+  //             title="Nouvelle conversation"
+  //             iconName="plus-circle"
+  //             onPress={() => navigation.navigate('NEWCHAT')}
+  //           />
+  //         </HeaderButtons>
+  //       );
+  //     },
+  //   });
+  // }, []);
 
   const chatPressed = async chat => {
     navigation.navigate('CHAT', {
@@ -103,7 +103,7 @@ export default function ChatList({navigation}) {
   );
 
   return (
-    <Screen>
+    <React.Fragment>
       {isLoading && (
         <View style={CommonStyles.center}>
           <ActivityIndicator size={'large'} color={Colors.primary} />
@@ -169,7 +169,7 @@ export default function ChatList({navigation}) {
           />
         </View>
       )}
-    </Screen>
+    </React.Fragment>
   );
 }
 

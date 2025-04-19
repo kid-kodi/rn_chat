@@ -17,6 +17,7 @@ export default function UserProvider({children}) {
   const socket = useSocket();
 
   const autoLogin = async () => {
+    setIsLoading(true);
     const me = await api.get('/api/auth/me');
     if (me.user) {
       setUser(me.user);
@@ -28,6 +29,7 @@ export default function UserProvider({children}) {
         setFcmToken(_fcmToken);
         await api.post('/api/auth/update-token', {fcmToken: _fcmToken});
       }
+      setIsLoading(false);
     }
     return me;
   };

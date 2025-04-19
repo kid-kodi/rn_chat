@@ -1,8 +1,8 @@
 import 'react-native-gesture-handler';
-import React, {useEffect} from 'react';
-import {createStackNavigator} from '@react-navigation/stack';
-import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {ToastProvider} from 'react-native-toast-notifications';
+import React, { useEffect } from 'react';
+import { createStackNavigator } from '@react-navigation/stack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ToastProvider } from 'react-native-toast-notifications';
 import Toast from 'react-native-toast-notifications';
 import Orientation from 'react-native-orientation-locker';
 import SplashScreen from './src/core/SplashScreen';
@@ -10,7 +10,7 @@ import Login from './src/auth/Login';
 import Register from './src/auth/Register';
 import TabScreen from './src/core/TabScreen';
 import ApiProvider from './src/core/contexts/ApiProvider';
-import {NavigationContainer} from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import UserProvider from './src/core/contexts/UserProvider';
 import ChatProvider from './src/core/contexts/ChatProvider';
 import DataList from './src/core/DataList';
@@ -20,9 +20,9 @@ import ChatSetting from './src/chat/ChatSetting';
 import Chat from './src/chat/Chat';
 import NewChat from './src/chat/NewChat';
 import SocketProvider from './src/core/contexts/SocketProvider';
-import {MenuProvider} from 'react-native-popup-menu';
+import { MenuProvider } from 'react-native-popup-menu';
 import EditProfile from './src/auth/EditProfile';
-import {Alert, Linking} from 'react-native';
+import { Alert, Linking } from 'react-native';
 
 import StartScreen from './src/onboarding/StartScreen';
 import Strings from './src/core/constants/Strings';
@@ -34,14 +34,16 @@ import NewGroup from './src/chat/NewGroup';
 import AddParticipants from './src/chat/AddParticipants';
 
 import messaging from '@react-native-firebase/messaging';
-import {RequestUserPermission} from './src/core/helpers/NotificationService';
+import { RequestUserPermission } from './src/core/helpers/NotificationService';
 import NotificationProvider from './src/core/contexts/NotificationProvider';
 import AutoLogin from './src/core/components/AutoLogin';
 import RNCallKeep from 'react-native-callkeep';
 import MeetingSettingScreen from './src/core/MeetingSettingScreen';
 import UserSettingScreen from './src/core/UserSettingScreen';
 import NormalSetting from './src/core/NormalSetting';
-import EditProfileScreen from './src/core/EditProfileScreen';
+import EditProfileScreen from './src/profile/EditProfileScreen';
+import ProfileScreen from './src/profile/ProfileScreen';
+import NotificationScreens from './src/notification/NotificationScreen';
 
 const Stack = createStackNavigator();
 
@@ -76,7 +78,7 @@ const linking = {
     }
   },
   subscribe(listener) {
-    const onReceiveURL = ({url}) => listener(url);
+    const onReceiveURL = ({ url }) => listener(url);
 
     // Listen to incoming links from deep linking
     const linkingSubscription = Linking.addEventListener('url', onReceiveURL);
@@ -201,11 +203,23 @@ export default function App() {
                               }}
                             />
                             <Stack.Screen
-                              name={'TAB'}
-                              component={TabScreen}
+                              name={'PROFILE'}
+                              component={ProfileScreen}
                               options={{
                                 headerShown: false,
                               }}
+                            />
+                            <Stack.Screen
+                              name={'NOTIFICATION'}
+                              component={NotificationScreens}
+                              options={{
+                                headerShown: false,
+                              }}
+                            />
+                            <Stack.Screen
+                              name={'TAB'}
+                              component={TabScreen}
+                              options={{ headerShown: false }}
                             />
                             <Stack.Screen
                               name="CHAT"
@@ -217,7 +231,7 @@ export default function App() {
                             <Stack.Screen
                               name="CALL"
                               component={MeetingPage}
-                              options={{headerShown: false}}
+                              options={{ headerShown: false }}
                             />
                             <Stack.Screen
                               name="CHAT_SETTINGS"
@@ -245,36 +259,36 @@ export default function App() {
                             />
                           </Stack.Group>
                           <Stack.Group
-                            screenOptions={{presentation: 'containedModal'}}>
+                            screenOptions={{ presentation: 'containedModal' }}>
                             <Stack.Screen
                               name="NEWCHAT"
                               component={NewChat}
-                              options={{headerShown: false}}
+                              options={{ headerShown: false }}
                             />
                             <Stack.Screen
                               name="NEW_GROUP"
                               component={NewGroup}
-                              options={{headerShown: false}}
+                              options={{ headerShown: false }}
                             />
                             <Stack.Screen
                               name="ADD_PARTICIPANTS"
                               component={AddParticipants}
-                              options={{headerShown: false}}
+                              options={{ headerShown: false }}
                             />
                             <Stack.Screen
                               name="MEETING_SETTING"
                               component={MeetingSettingScreen}
-                              options={{headerShown: false}}
+                              options={{ headerShown: false }}
                             />
                             <Stack.Screen
                               name="USER_SETTING"
                               component={UserSettingScreen}
-                              options={{headerShown: false}}
+                              options={{ headerShown: false }}
                             />
                             <Stack.Screen
                               name="NORMAL_SETTING"
                               component={NormalSetting}
-                              options={{headerShown: false}}
+                              options={{ headerShown: false }}
                             />
                           </Stack.Group>
                         </Stack.Navigator>
