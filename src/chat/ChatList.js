@@ -6,19 +6,17 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
-import React, {useCallback, useEffect, useState} from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Icon from 'react-native-vector-icons/Feather';
-import {HeaderButtons, Item} from 'react-navigation-header-buttons';
-import CustomHeaderButton from '../core/components/CustomHeaderButton';
-import Screen from '../core/components/Screen';
+
 import DataItem from '../core/components/DataItem';
 import Colors from '../core/constants/Colors';
 import CommonStyles from '../core/constants/CommonStyles';
-import {useSocket} from '../core/contexts/SocketProvider';
-import {useApi} from '../core/contexts/ApiProvider';
-import {useUser} from '../core/contexts/UserProvider';
+import { useSocket } from '../core/contexts/SocketProvider';
+import { useApi } from '../core/contexts/ApiProvider';
+import { useUser } from '../core/contexts/UserProvider';
 // import {useIsFocused} from '@react-navigation/native';
-import {useFocusEffect, useIsFocused} from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import {
   TimeAgo,
   formatChatDate,
@@ -26,10 +24,10 @@ import {
   formatToTime,
 } from '../core/helpers/Utility';
 
-export default function ChatList({navigation}) {
+export default function ChatList({ navigation }) {
   const isFocused = useIsFocused();
 
-  const {user} = useUser();
+  const { user } = useUser();
   const api = useApi();
   const socket = useSocket();
 
@@ -39,23 +37,6 @@ export default function ChatList({navigation}) {
   const [unReadMessages, setUnreadMessages] = useState([]);
   const [users, setUsers] = useState([]);
 
-  // useEffect(() => {
-  //   navigation.setOptions({
-  //     headerTitle: 'Solisakane',
-  //     headerRight: () => {
-  //       return (
-  //         <HeaderButtons HeaderButtonComponent={CustomHeaderButton}>
-  //           <Item
-  //             title="Nouvelle conversation"
-  //             iconName="plus-circle"
-  //             onPress={() => navigation.navigate('NEWCHAT')}
-  //           />
-  //         </HeaderButtons>
-  //       );
-  //     },
-  //   });
-  // }, []);
-
   const chatPressed = async chat => {
     navigation.navigate('CHAT', {
       chatId: chat._id,
@@ -64,7 +45,7 @@ export default function ChatList({navigation}) {
 
   useEffect(() => {
     socket.emit('join_chat', user._id);
-    
+
     socket.on('new_chat', chat => {
       setChats(oldArray => [...oldArray, chat])
     });
@@ -73,7 +54,7 @@ export default function ChatList({navigation}) {
       setChats(prevState => {
         const newState = prevState.map(obj => {
           if (obj._id === values.chat._id) {
-            return {...obj, lastMessage: values};
+            return { ...obj, lastMessage: values };
           }
           return obj;
         });
@@ -125,9 +106,9 @@ export default function ChatList({navigation}) {
       {!isLoading && chats?.length > 0 && (
         <View>
           <FlatList
-            style={{paddingVertical: 0, paddingHorizontal: 20}}
+            style={{ paddingVertical: 0, paddingHorizontal: 20 }}
             data={chats}
-            renderItem={({item}) => {
+            renderItem={({ item }) => {
               return (
                 <>
                   {item.isGroupChat ? (
@@ -169,6 +150,13 @@ export default function ChatList({navigation}) {
           />
         </View>
       )}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          navigation.navigate("NEWCHAT");
+        }}>
+        <Icon name="message-circle" color={'#fff'} size={25} />
+      </TouchableOpacity>
     </React.Fragment>
   );
 }
@@ -186,5 +174,16 @@ const styles = StyleSheet.create({
     color: Colors.blue,
     fontSize: 17,
     marginBottom: 5,
+  },
+  fab: {
+    width: 60,
+    height: 60,
+    borderRadius: 50,
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: Colors.blue,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

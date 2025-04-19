@@ -1,4 +1,4 @@
-import {View, Text, TextInput, StyleSheet} from 'react-native';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 import React from 'react';
 import Colors from '../constants/Colors';
 
@@ -10,7 +10,7 @@ export default function Input(props) {
         {props.icon && (
           <props.iconPack
             name={props.icon}
-            size={props.iconSize || 20}
+            size={props.iconSize || 24}
             style={styles.icon}
           />
         )}
@@ -23,7 +23,7 @@ export default function Input(props) {
           {...props}
         />
         {!!props.secureText ? (
-          <Text style={{...styles.textStyle, flex: 0}} onPress={props.onPressSecure}>
+          <Text style={{ ...styles.textStyle, flex: 0 }} onPress={props.onPressSecure}>
             {props.secureText}
           </Text>
         ) : null}
@@ -48,14 +48,9 @@ const styles = StyleSheet.create({
     color: Colors.textColor,
   },
   inputContainer: {
-    width: '100%',
-    backgroundColor: 'red',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 5,
-    backgroundColor: Colors.nearlyWhite,
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 12,
   },
   icon: {
     marginRight: 10,
@@ -65,8 +60,7 @@ const styles = StyleSheet.create({
     color: Colors.textColor,
     flex: 1,
     fontFamily: 'regular',
-    letterSpacing: 0.3,
-    paddingTop: 0,
+    letterSpacing: 0.3
   },
   errorContainer: {
     marginVertical: 5,

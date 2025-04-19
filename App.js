@@ -266,6 +266,11 @@ export default function App() {
                               options={{ headerShown: false }}
                             />
                             <Stack.Screen
+                              name="NEWCONTACT"
+                              component={NewChat}
+                              options={{ headerShown: false }}
+                            />
+                            <Stack.Screen
                               name="NEW_GROUP"
                               component={NewGroup}
                               options={{ headerShown: false }}

@@ -16,7 +16,11 @@ export default function Navbar({ navigation }) {
                 onPress={() => {
                     navigation.navigate('PROFILE');
                 }} style={styles.left}>
-                <Avatar source={user.profilePicture !== "" ? `${BASE_API_URL}/image/${user.profilePicture}` : null} />
+                <Avatar
+                size={42}
+                    letter={user?.fullName[0]}
+                    source={user.profilePicture ?
+                        `${BASE_API_URL}/image/${user.profilePicture}` : null} />
                 <View style={styles.info}>
                     <Text style={styles.infoPrimary}>{user.fullName}</Text>
                     <Text>status</Text>

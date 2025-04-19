@@ -1,4 +1,4 @@
- import React from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -8,24 +8,24 @@ import {
   ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import {useFormik} from 'formik';
+import { useFormik } from 'formik';
 import * as Yup from 'yup';
 
 import Screen from './components/Screen';
 import Header from './components/PageTitle';
 import Input from './components/Input';
-import {useUser} from './contexts/UserProvider';
+import { useUser } from './contexts/UserProvider';
 import Colors from './constants/Colors';
 import Button from './components/Button';
 import ProfileImage from './components/ProfileImage';
-import {BASE_API_URL} from '@env';
+import { BASE_API_URL } from '@env';
 
 const SettingsSchema = Yup.object().shape({
   email: Yup.string().email('Email invalide').required('Champs requis !'),
 });
 
-export default function Settings({navigation}) {
-  const {user, logout, update} = useUser();
+export default function Settings({ navigation }) {
+  const { user, logout, update } = useUser();
 
   const formik = useFormik({
     enableReinitialize: true,
@@ -49,7 +49,7 @@ export default function Settings({navigation}) {
 
   const handleLogout = async () => {
     const response = await logout();
-    if(response.success){
+    if (response.success) {
       navigation.navigate("LOGIN");
     }
   };
@@ -101,7 +101,7 @@ export default function Settings({navigation}) {
             }
             onPress={formik.handleSubmit}
             isLoading={formik.isSubmitting}
-            style={{marginTop: 20}}
+            style={{ marginTop: 20 }}
           />
         )}
 

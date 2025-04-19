@@ -17,9 +17,51 @@ import ImagePicker from 'react-native-image-crop-picker';
 import { useApi } from '../core/contexts/ApiProvider';
 // import { useUser } from '../core/contexts/UserProvider';
 
+import Avatar from '../core/components/Avatar';
+
+import { useUser } from '../core/contexts/UserProvider';
+
+
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+
+import Input from '../core/components/Input';
+import Button from '../core/components/Button';
+import { BASE_API_URL } from '@env';
+import { hasAndroidPermission } from '../core/helpers/ImagePickerUtil';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const SettingsSchema = Yup.object().shape({
+  email: Yup.string().email('Email invalide').required('Champs requis !'),
+});
+
 const ProfileScreen = ({ navigation }) => {
 
-    const api = useApi();
+  const { user, isLoading, updateProfile } = useUser()
+
+  const formik = useFormik({
+    enableReinitialize: true,
+    initialValues: {
+      profilePicture: user?.profilePicture,
+      firstName: user?.firstName,
+      lastName: user?.lastName,
+      fullName: user?.firstName + ' ' + user?.lastName,
+      email: user?.email,
+      telephone: user?.telephone,
+    },
+    validationSchema: SettingsSchema,
+    onSubmit: async values => {
+      values._id = user._id;
+      values.fullName = values.firstName + ' ' + values.lastName;
+      const response = await updateProfile(values);
+      if (response.success) {
+        Alert.alert(response.message);
+      }
+    },
+  });
+
+  const api = useApi();
 
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -38,97 +80,68 @@ const ProfileScreen = ({ navigation }) => {
   useEffect(() => {
     // Fetch user profile data
     fetchUserProfile();
-
-    // Request permissions for image picker (for profile photo)
-    (async () => {
-      if (Platform.OS !== 'web') {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission required', 'Sorry, we need camera roll permissions to change your profile picture.');
-        }
-      }
-    })();
   }, []);
 
   const fetchUserProfile = async () => {
     const response = await api.get('/api/auth/me');
     if (response.user) {
-        setProfileData(response.user);
+      setProfileData(response.user);
     }
-    else{
-        setProfileData(null)
+    else {
+      setProfileData(null)
     }
   };
 
-  const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
-          style: 'destructive',
-          onPress: async () => {
-            
-          }
-        }
-      ]
-    );
-  };
 
   const handleChangeProfilePicture = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
+    await hasAndroidPermission();
+    ImagePicker.openPicker({
+      width: 300,
+      height: 400,
+      cropping: true,
+    })
+      .then(async image => {
+        setUploading(true);
 
-    if (!result.canceled && result.assets && result.assets[0]) {
-      uploadProfilePicture(result.assets[0].uri);
-    }
-  };
+        const data = new FormData();
+        data.append('image', {
+          fileName: 'image',
+          name: 'image.png',
+          type: 'image/png',
+          uri:
+            Platform.OS == 'android'
+              ? image.path
+              : image.path.replace('file://', ''),
+        });
 
-  const uploadProfilePicture = async (imageUri) => {
-    try {
-      setUploading(true);
-      
-      // Create form data for image upload
-      const formData = new FormData();
-      formData.append('profilePicture', {
-        uri: imageUri,
-        type: 'image/jpeg',
-        name: 'profile-picture.jpg',
+        let token = await AsyncStorage.getItem('user');
+
+        const response = await api.post('/api/files/upload-image', data, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        console.log(response.data.name);
+
+        // update user profile image
+        const update_response = await updateProfile({
+          profilePicture: response.data.name,
+        });
+        if (!update_response.success) {
+          Alert.alert(update_response.error.message);
+        }
+        setProfileData(prev => ({
+          ...prev,
+          profilePicture: response.data.name
+        }));
+        setUploading(false);
+      })
+      .catch(error => {
+        console.log('error riased', error);
+        setUploading(false);
       });
-      
-      // Replace with your actual API endpoint
-    //   const response = await fetch('https://yourapi.com/api/users/profile/picture', {
-    //     method: 'POST',
-    //     headers: {
-    //       'Authorization': `Bearer ${/* your auth token */}`,
-    //       'Content-Type': 'multipart/form-data',
-    //     },
-    //     body: formData,
-    //   });
-      
-    //   if (!response.ok) {
-    //     throw new Error('Failed to upload profile picture');
-    //   }
-      
-      // Update profile data with new image
-      const updatedProfile = await response.json();
-      setProfileData(prev => ({
-        ...prev,
-        profilePicture: updatedProfile.profilePicture
-      }));
-      
-      setUploading(false);
-      Alert.alert('Success', 'Profile picture updated successfully');
-    } catch (err) {
-      setUploading(false);
-      Alert.alert('Error', 'Failed to update profile picture. Please try again.');
-    }
   };
 
   const toggleSetting = (setting) => {
@@ -137,10 +150,10 @@ const ProfileScreen = ({ navigation }) => {
         ...prev,
         [setting]: !prev[setting]
       };
-      
+
       // Update user notification settings on server
       updateNotificationSettings(newSettings);
-      
+
       return newSettings;
     });
   };
@@ -162,7 +175,7 @@ const ProfileScreen = ({ navigation }) => {
     // }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -184,13 +197,12 @@ const ProfileScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="chevron-back" size={28} color="#007AFF" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Mon Profile</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('EDIT_PROFILE')}>
-          <Text style={styles.editText}>Modifier</Text>
-        </TouchableOpacity>
+        <View style={styles.headerInfo}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="chevron-back" size={28} color="#007AFF" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Mon Profile</Text>
+        </View>
       </View>
 
       <ScrollView>
@@ -202,22 +214,13 @@ const ProfileScreen = ({ navigation }) => {
                   <ActivityIndicator color="#fff" />
                 </View>
               ) : (
-                <>
-                  {profileData?.profilePicture !== "" ? (
-                    <Image
-                      source={{ uri: profileData?.profilePicture }}
-                      style={styles.profileImage}
-                    />
-                  ) : (
-                    <View style={[styles.profileImage, styles.placeholderImage]}>
-                      <Text style={styles.placeholderText}>
-                        {profileData?.fullName?.charAt(0).toUpperCase() || 'U'}
-                      </Text>
-                    </View>
-                  )}
-                </>
+                <Avatar
+                  size={100}
+                  letter={profileData?.fullName[0]}
+                  source={profileData?.profilePicture ?
+                    `${BASE_API_URL}/image/${profileData?.profilePicture}` : null} />
               )}
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.changePhotoButton}
                 onPress={handleChangeProfilePicture}
               >
@@ -232,21 +235,56 @@ const ProfileScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.infoSection}>
-            <View style={styles.infoItem}>
-              <Icon name="mail-outline" size={24} color="#666" />
-              <Text style={styles.infoText}>{profileData?.email || 'email@example.com'}</Text>
-            </View>
-            
-            {profileData?.telephone && (
-              <View style={styles.infoItem}>
-                <Icon name="call-outline" size={24} color="#666" />
-                <Text style={styles.infoText}>{profileData.telephone}</Text>
-              </View>
+
+            <Input
+              icon="person-outline"
+              iconPack={Icon}
+              errorText={formik.errors.firstName}
+              value={formik.values.firstName}
+              onChangeText={formik.handleChange('firstName')}
+            />
+
+            <Input
+              icon="person-outline"
+              iconPack={Icon}
+              errorText={formik.errors.lastName}
+              value={formik.values.lastName}
+              onChangeText={formik.handleChange('lastName')}
+            />
+
+            <Input
+              icon="mail-outline"
+              iconPack={Icon}
+              errorText={formik.errors.email}
+              value={formik.values.email}
+              onChangeText={formik.handleChange('email')}
+            />
+
+            <Input
+              icon="call-outline"
+              iconPack={Icon}
+              errorText={formik.errors.telephone}
+              value={formik.values.telephone}
+              onChangeText={formik.handleChange('telephone')}
+            />
+            {formik.dirty && (
+              <Button
+                title={`Enregistrer`}
+                disabled={
+                  formik.errors.email ||
+                  formik.errors.password ||
+                  formik.isSubmitting
+                }
+                onPress={formik.handleSubmit}
+                isLoading={formik.isSubmitting}
+                style={{ marginTop: 20 }}
+              />
             )}
           </View>
         </View>
 
-        <View style={styles.section}>
+
+        {/* <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notifications</Text>
           
           <View style={styles.settingItem}>
@@ -298,60 +336,8 @@ const ProfileScreen = ({ navigation }) => {
               thumbColor={Platform.OS === 'ios' ? '' : '#fff'}
             />
           </View>
-        </View>
+        </View> */}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Privacy & Security</Text>
-          
-          <TouchableOpacity 
-            style={styles.navigationItem}
-            onPress={() => navigation.navigate('PrivacySettings')}
-          >
-            <Text style={styles.navigationLabel}>Privacy Settings</Text>
-            <Icon name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.navigationItem}
-            onPress={() => navigation.navigate('BlockedUsers')}
-          >
-            <Text style={styles.navigationLabel}>Blocked Users</Text>
-            <Icon name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.navigationItem}
-            onPress={() => navigation.navigate('ChangePassword')}
-          >
-            <Text style={styles.navigationLabel}>Change Password</Text>
-            <Icon name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <TouchableOpacity 
-            style={styles.navigationItem}
-            onPress={() => navigation.navigate('Help')}
-          >
-            <Text style={styles.navigationLabel}>Help & Support</Text>
-            <Icon name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.navigationItem}
-            onPress={() => navigation.navigate('About')}
-          >
-            <Text style={styles.navigationLabel}>About</Text>
-            <Icon name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.navigationItem, styles.logoutButton]}
-            onPress={handleLogout}
-          >
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -393,10 +379,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  headerInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    gap: 16,
     backgroundColor: '#fff',
   },
   title: {

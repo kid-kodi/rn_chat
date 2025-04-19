@@ -3,6 +3,8 @@ import React, { useState } from 'react'
 import Icon from 'react-native-vector-icons/Ionicons';
 import { moderateScale } from '../assets/styles/responsiveSize';
 import Modal from 'react-native-modal';
+import { BASE_API_URL } from '@env';
+import Avatar from '../core/components/Avatar';
 
 const actions = [
     { id: '1', label: 'Call', icon: 'call-outline' },
@@ -36,20 +38,10 @@ export default function ContactItem({ item }) {
     return (
         <>
             <TouchableOpacity onPress={toggleModal} style={[styles.card]}>
-                {item.profilePicture ? (
-                    <Image
-                        alt=""
-                        resizeMode="cover"
-                        source={{ uri: item.profilePicture }}
-                        style={styles.cardImg}
-                    />
-                ) : (
-                    <View style={[styles.cardImg, styles.cardAvatar]}>
-                        <Text style={styles.cardAvatarText}>
-                            {item.fullName[0]}
-                        </Text>
-                    </View>
-                )}
+                <Avatar
+                    letter={item?.fullName[0]}
+                    source={!item.profilePicture ?
+                        `${BASE_API_URL}/image/${item.profilePicture}` : null} />
                 <View style={styles.cardBody}>
                     <Text style={styles.cardTitle}>{item.fullName}</Text>
                 </View>
@@ -58,7 +50,7 @@ export default function ContactItem({ item }) {
                 <View style={styles.container}>
                     <View style={styles.header}>
                         <TouchableOpacity onPress={toggleModal} style={styles.closeIcon}>
-                            <Icon name="close-outline" size={32} color="#333"/>
+                            <Icon name="close-outline" size={32} color="#333" />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={handleEditImage} style={styles.profileWrapper}>
                             {item.profilePicture ? (
