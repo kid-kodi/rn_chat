@@ -43,6 +43,32 @@ export default function ChatList({ navigation }) {
     });
   };
 
+  function updateConversationWithJoinButton(chatId, callerId, cameraStatus,
+    microphoneStatus) {
+      console.log("##################first")
+    setChats(prev =>
+      prev.map(conv =>
+        conv._id === chatId
+          ? {
+            ...conv, ongoingCall: {
+              chatId, callerId, cameraStatus,
+              microphoneStatus
+            }
+          }
+          : conv
+      )
+    );
+  }
+
+  function joinCall(data) {
+    console.log(data);
+    navigation.navigate('CALL', {
+      chatId: data.ongoingCall.chatId,
+      cameraStatus: data.ongoingCall.cameraStatus,
+      microphoneStatus: data.ongoingCall.microphoneStatus,
+    });
+  }
+
   useEffect(() => {
     socket.emit('join_chat', user._id);
 
@@ -63,12 +89,20 @@ export default function ChatList({ navigation }) {
       });
     });
 
+    socket.on("call_notification", ({ chatId, callerId, cameraStatus,
+      microphoneStatus }) => {
+      updateConversationWithJoinButton(chatId, callerId, cameraStatus,
+        microphoneStatus);
+    });
+
     return () => {
       socket.removeListener('new_chat');
       socket.removeListener('new_message');
+      socket.removeListener("call_notification");
       socket.emit('leave_chat', user._id);
     };
   }, []);
+
 
   useFocusEffect(
     React.useCallback(() => {
@@ -126,6 +160,8 @@ export default function ChatList({ navigation }) {
                       }
                       image={item?.image?.name}
                       onPress={() => chatPressed(item)}
+                      ongoingCall={item.ongoingCall}
+                      joinCall={() =>joinCall(item)}
                     />
                   ) : (
                     <DataItem
@@ -142,6 +178,8 @@ export default function ChatList({ navigation }) {
                       }
                       image={item.users[0]?.profilePicture}
                       onPress={() => chatPressed(item)}
+                      ongoingCall={item.ongoingCall}
+                      joinCall={() =>joinCall(item)}
                     />
                   )}
                 </>

@@ -225,6 +225,7 @@ export default function App() {
                               name="CHAT"
                               component={Chat}
                               options={{
+                                headerTitle : "",
                                 headerShadowVisible: false,
                               }}
                             />

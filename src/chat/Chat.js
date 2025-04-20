@@ -14,23 +14,23 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Icon from 'react-native-vector-icons/Feather';
 import backgroundImage from '../assets/images/bg.jpeg';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Colors from '../core/constants/Colors';
-import {useApi} from '../core/contexts/ApiProvider';
+import { useApi } from '../core/contexts/ApiProvider';
 import Bubble from '../core/components/Bubble';
-import {useUser} from '../core/contexts/UserProvider';
+import { useUser } from '../core/contexts/UserProvider';
 import ReplyTo from './ReplyTo';
-import {hasAndroidPermission} from '../core/helpers/ImagePickerUtil';
+import { hasAndroidPermission } from '../core/helpers/ImagePickerUtil';
 import ImagePicker from 'react-native-image-crop-picker';
 import AwesomeAlert from 'react-native-awesome-alerts';
-import {BASE_API_URL} from '@env';
+import { BASE_API_URL } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {HeaderButtons, Item} from 'react-navigation-header-buttons';
+import { HeaderButtons, Item } from 'react-navigation-header-buttons';
 import CustomHeaderButton from '../core/components/CustomHeaderButton';
-import {useSocket} from '../core/contexts/SocketProvider';
+import { useSocket } from '../core/contexts/SocketProvider';
 import Typing from './Typing';
 import CommonStyles from '../core/constants/CommonStyles';
 import CallKeepImpl from '../core/utils/CallKeepImpl';
@@ -38,18 +38,18 @@ import CallKeepImpl from '../core/utils/CallKeepImpl';
 import moment from 'moment';
 import throttle from 'lodash.throttle';
 import TextWithFont from '../core/components/TextWithFont';
-import {textScale} from '../assets/styles/responsiveSize';
+import { textScale } from '../assets/styles/responsiveSize';
 
-import {TimeAgo, formatChatDate} from '../core/helpers/Utility';
+import { TimeAgo, formatChatDate } from '../core/helpers/Utility';
 import CustomHeaderTitle from '../core/components/CustomHeaderTitle';
 
 
-export default function Chat({navigation, route}) {
-  const {chatId} = route.params;
+export default function Chat({ navigation, route }) {
+  const { chatId } = route.params;
 
   const api = useApi();
   const socket = useSocket();
-  const {user} = useUser();
+  const { user } = useUser();
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -100,7 +100,11 @@ export default function Chat({navigation, route}) {
 
   const initiateCall = async data => {
     await api.post(`/api/call/initiate-call`, data);
-    
+    socket.emit('call_started', {
+      chatId, callerId: user?._id, cameraStatus: data.cameraStatus,
+      microphoneStatus: data.microphoneStatus,
+    });
+
     // CallKeepImpl.startCall({
     //   handle: data.callee.fullName,
     //   localizedCallerName: data.callee.fullName,
@@ -108,7 +112,23 @@ export default function Chat({navigation, route}) {
     navigation.navigate('CALL', {
       chatId: data.chatId,
       cameraStatus: data.cameraStatus,
-      microphoneStatus:  data.microphoneStatus,
+      microphoneStatus: data.microphoneStatus,
+    });
+    // CallKeepImpl.backToForeground()
+    return false;
+  };
+
+  const joinCall = async data => {
+    
+
+    // CallKeepImpl.startCall({
+    //   handle: data.callee.fullName,
+    //   localizedCallerName: data.callee.fullName,
+    // });
+    navigation.navigate('CALL', {
+      chatId: data.chatId,
+      cameraStatus: data.cameraStatus,
+      microphoneStatus: data.microphoneStatus,
     });
     // CallKeepImpl.backToForeground()
     return false;
@@ -121,7 +141,7 @@ export default function Chat({navigation, route}) {
       handleIncomingMessage(data);
     });
 
-    socket.on('user_online', ({userId, online, lastSeen}) => {
+    socket.on('user_online', ({ userId, online, lastSeen }) => {
       if (userId == receiverIds) {
         setReceriverFullDetails({
           online: online,
@@ -138,10 +158,10 @@ export default function Chat({navigation, route}) {
   }, []);
 
   useEffect(() => {
-    socket.on('user_typing', ({userId}) => {
+    socket.on('user_typing', ({ userId }) => {
       setIsTyping(user._id !== userId);
     });
-    socket.on('user_stopped', ({userId}) => {
+    socket.on('user_stopped', ({ userId }) => {
       setIsTyping(false);
     });
     return () => {
@@ -151,7 +171,7 @@ export default function Chat({navigation, route}) {
   }, [user?._id, isTyping]);
 
   const startTyping = () => {
-    socket.emit('is_typing', {roomId: chatId, userId: user?._id});
+    socket.emit('is_typing', { roomId: chatId, userId: user?._id });
   };
 
   const stopTyping = () => {
@@ -179,8 +199,8 @@ export default function Chat({navigation, route}) {
                 subtitle={TimeAgo(chat?.lastMessage?.createdAt)}
                 onPress={() =>
                   chat?.isGroupChat
-                    ? navigation.navigate('CHAT_SETTINGS', {chat})
-                    : navigation.navigate('CONTACT', {callee, chat})
+                    ? navigation.navigate('CHAT_SETTINGS', { chat })
+                    : navigation.navigate('CONTACT', { callee, chat })
                 }
               />
             );
@@ -188,7 +208,7 @@ export default function Chat({navigation, route}) {
           headerRight: () => {
             return (
               <HeaderButtons HeaderButtonComponent={CustomHeaderButton}>
-                <Item
+                {!chat.ongoingCall && <Item
                   title="Video"
                   iconName="video"
                   onPress={() => {
@@ -200,8 +220,8 @@ export default function Chat({navigation, route}) {
                       microphoneStatus: true,
                     });
                   }}
-                />
-                <Item
+                />}
+                {!chat.ongoingCall && <Item
                   title="Phone"
                   iconName="phone"
                   onPress={() => {
@@ -213,7 +233,20 @@ export default function Chat({navigation, route}) {
                       microphoneStatus: true,
                     });
                   }}
-                />
+                />}
+                {chat.ongoingCall && <Item
+                  title="Rejoindre"
+                  iconName="phone"
+                  onPress={() => {
+                    joinCall({
+                      chatId: chat._id,
+                      callerId: user._id,
+                      callee,
+                      cameraStatus: false,
+                      microphoneStatus: true,
+                    });
+                  }}
+                />}
               </HeaderButtons>
             );
           },
@@ -286,9 +319,9 @@ export default function Chat({navigation, route}) {
     );
   };
 
-  const renderDate = ({item}) => {
+  const renderDate = ({ item }) => {
     return (
-      <View style={{justifyContent: 'center', alignItems: 'center'}}>
+      <View style={{ justifyContent: 'center', alignItems: 'center' }}>
         <TextWithFont
           style={{
             padding: 5,
@@ -338,7 +371,7 @@ export default function Chat({navigation, route}) {
     try {
       const content = messageText;
       setMessageText('');
-      const {data} = await api.post(`/api/messages`, {
+      const { data } = await api.post(`/api/messages`, {
         chat: chatId,
         sender: user?._id,
         content,
@@ -372,7 +405,7 @@ export default function Chat({navigation, route}) {
   const handleIncomingMessage = message => {
     const date = moment(message.createdAt).format('YYYY-MM-DD');
     setMessages(prevMessages => {
-      const updatedMessages = {...prevMessages};
+      const updatedMessages = { ...prevMessages };
       if (!updatedMessages[date]) {
         updatedMessages[date] = [];
       }
@@ -454,7 +487,7 @@ export default function Chat({navigation, route}) {
 
     if (response.success) {
       setFile(response.data);
-      setImage({uri: `${BASE_API_URL}/image/${response.data.name}`});
+      setImage({ uri: `${BASE_API_URL}/image/${response.data.name}` });
 
       setIsLoading(false);
 
@@ -501,14 +534,14 @@ export default function Chat({navigation, route}) {
             {groupedMessages && (
               <View>
                 <FlatList
-                  style={{padding: 20}}
+                  style={{ padding: 20 }}
                   data={groupedMessages}
-                  renderItem={({item}) => (
+                  renderItem={({ item }) => (
                     <>
                       {item.messages.map(msg => (
                         <View key={msg._id}>{renderItem(msg)}</View>
                       ))}
-                      {renderDate({item: item.date})}
+                      {renderDate({ item: item.date })}
                     </>
                   )}
                   keyExtractor={item => item.date}
@@ -577,7 +610,7 @@ export default function Chat({navigation, route}) {
 
           {!isSending && messageText !== '' && (
             <TouchableOpacity
-              style={{...styles.mediaButton, ...styles.sendButton}}
+              style={{ ...styles.mediaButton, ...styles.sendButton }}
               onPress={sendMessage}>
               <Icon name="send" size={20} color={Colors.white} />
             </TouchableOpacity>
@@ -606,8 +639,8 @@ export default function Chat({navigation, route}) {
 
                 {!isLoading && tempImageUri !== '' && (
                   <Image
-                    source={{uri: tempImageUri}}
-                    style={{width: 200, height: 200}}
+                    source={{ uri: tempImageUri }}
+                    style={{ width: 200, height: 200 }}
                   />
                 )}
               </View>

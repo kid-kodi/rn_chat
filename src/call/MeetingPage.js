@@ -49,7 +49,7 @@ export default function MeetingPage({navigation, route}) {
     microphoneStatus === true || microphoneStatus === 'true' ? 'on' : 'off',
   );
 
-  const [view, setView] = useState('portrait');
+  const [view, setView] = useState('grid');
   const [audioRoute, setAudioRoute] = useState('Speaker');
   const [portraitIndex, setPortraitIndex] = useState(0);
 
@@ -81,8 +81,9 @@ export default function MeetingPage({navigation, route}) {
       if (chat) currentChat.current = chat;
 
       const callee = chat?.users.find(u => u._id !== user._id);
-      const _chatName = chat.isGroupChat ? chat.chatName : callee.fullName;
+      const _chatName = chat?.isGroupChat ? chat?.chatName : callee?.fullName;
       setChatName(_chatName);
+      setView(chat?.isGroupChat ? "grid" : "portrait");
 
       MeetingVariable.mediaService.registerPeerUpdateListener(
         'peer',

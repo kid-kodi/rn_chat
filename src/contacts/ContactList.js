@@ -52,12 +52,15 @@ export default function ContactList({ navigation }) {
 
 
   return (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        data={users}
-        renderItem={renderItem}
-        keyExtractor={item => item._id}
-      />
+    <React.Fragment>
+      <View style={styles.list}>
+        <FlatList
+
+          data={users}
+          renderItem={renderItem}
+          keyExtractor={item => item._id}
+        />
+      </View>
       <TouchableOpacity
         style={styles.fab}
         onPress={() => {
@@ -65,14 +68,16 @@ export default function ContactList({ navigation }) {
         }}>
         <Icon name="user-plus" color={'#fff'} size={25} />
       </TouchableOpacity>
-    </SafeAreaView>
+    </React.Fragment>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
     backgroundColor: '#fff'
+  },
+  list : {
+    paddingHorizontal: 16,
   },
   fab: {
     width: 60,

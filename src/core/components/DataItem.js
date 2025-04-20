@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 
 import ProfileImage from './ProfileImage';
-import {BASE_API_URL} from '@env';
+import { BASE_API_URL } from '@env';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Colors from '../../assets/styles/Colors';
 
@@ -25,6 +25,7 @@ export default function DataItem(props) {
     unreadCount,
     rightText,
     rightAction,
+    ongoingCall
   } = props;
 
   const hideImage = props.hideImage && props.hideImage === true;
@@ -52,7 +53,7 @@ export default function DataItem(props) {
             numberOfLines={1}
             style={{
               ...styles.title,
-              ...{color: type === 'button' ? Colors.primary : Colors.textColor},
+              ...{ color: type === 'button' ? Colors.primary : Colors.textColor },
             }}>
             {title}
           </Text>
@@ -90,19 +91,19 @@ export default function DataItem(props) {
           </View>
         )}
 
-        {rightText && (
+        {rightText && !ongoingCall && (
           <View>
-            <Text style={{fontSize: 11, color: Colors.blackOpacity40}}>
+            <Text style={{ fontSize: 11, color: Colors.blackOpacity40 }}>
               {rightText}
             </Text>
           </View>
         )}
 
-        {rightAction && (
+        {rightAction && !ongoingCall && (
           <View>
             <TouchableOpacity
               onPress={props.rightActionPress}
-              style={{fontSize: 11, color: Colors.blackOpacity40}}>
+              style={{ fontSize: 11, color: Colors.blackOpacity40 }}>
               <Icon
                 name="chevron-forward-outline"
                 size={18}
@@ -110,6 +111,12 @@ export default function DataItem(props) {
               />
             </TouchableOpacity>
           </View>
+        )}
+
+        {ongoingCall?.chatId && (
+          <TouchableOpacity style={styles.joinButton} onPress={props.joinCall}>
+            <Text style={styles.joinButtonText}>Rejoindre</Text>
+          </TouchableOpacity>
         )}
       </View>
     </TouchableWithoutFeedback>
@@ -167,4 +174,12 @@ const styles = StyleSheet.create({
     color: Colors.white,
     letterSpacing: 0.3,
   },
+  joinButton : {
+    backgroundColor: Colors.green,
+    padding: 5,
+    borderRadius : 100
+  },
+  joinButtonText : {
+    color: Colors.whiteColor,
+  }
 });
