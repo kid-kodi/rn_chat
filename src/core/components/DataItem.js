@@ -11,8 +11,9 @@ import ProfileImage from './ProfileImage';
 import { BASE_API_URL } from '@env';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Colors from '../../assets/styles/Colors';
+import { moderateScaleVertical } from '../../assets/styles/responsiveSize';
 
-const imageSize = 40;
+const imageSize = 50;
 
 export default function DataItem(props) {
   const {
@@ -43,8 +44,8 @@ export default function DataItem(props) {
         )}
 
         {icon && (
-          <View style={styles.leftIconContainer}>
-            <Icon name={icon} size={20} color={Colors.primary} />
+          <View style={[styles.leftIconContainer, {backgroundColor : Colors.blueColor}]}>
+            <Icon name={icon} size={20} color={Colors.whiteColor} />
           </View>
         )}
 
@@ -53,7 +54,7 @@ export default function DataItem(props) {
             numberOfLines={1}
             style={{
               ...styles.title,
-              ...{ color: type === 'button' ? Colors.primary : Colors.textColor },
+              ...{ color: type === 'button' ? Colors.primary : Colors.blackColor },
             }}>
             {title}
           </Text>
@@ -126,9 +127,8 @@ export default function DataItem(props) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    paddingVertical: 7,
+    paddingVertical: moderateScaleVertical(8),
     alignItems: 'center',
-    minHeight: 50,
   },
   textContainer: {
     flex: 1,
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'medium',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.3,
   },

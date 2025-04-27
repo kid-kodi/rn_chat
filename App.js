@@ -1,313 +1,386 @@
 import 'react-native-gesture-handler';
-import React, { useEffect } from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import React, { createContext, useEffect, useRef } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ToastProvider } from 'react-native-toast-notifications';
 import Toast from 'react-native-toast-notifications';
 import Orientation from 'react-native-orientation-locker';
-import SplashScreen from './src/core/SplashScreen';
-import Login from './src/auth/Login';
-import Register from './src/auth/Register';
-import TabScreen from './src/core/TabScreen';
+
 import ApiProvider from './src/core/contexts/ApiProvider';
 import { NavigationContainer } from '@react-navigation/native';
 import UserProvider from './src/core/contexts/UserProvider';
 import ChatProvider from './src/core/contexts/ChatProvider';
-import DataList from './src/core/DataList';
-import MeetingPage from './src/call/MeetingPage';
-import Contact from './src/chat/Contact';
-import ChatSetting from './src/chat/ChatSetting';
-import Chat from './src/chat/Chat';
-import NewChat from './src/chat/NewChat';
+
 import SocketProvider from './src/core/contexts/SocketProvider';
 import { MenuProvider } from 'react-native-popup-menu';
-import EditProfile from './src/auth/EditProfile';
-import { Alert, Linking } from 'react-native';
 
-import StartScreen from './src/onboarding/StartScreen';
 import Strings from './src/core/constants/Strings';
-import EmailCheckScreen from './src/onboarding/EmailCheckScreen';
-import OtpScreen from './src/onboarding/OtpScreen';
-import EditPasswordScreen from './src/onboarding/EditPasswordScreen';
-import EditNameScreen from './src/onboarding/EditNameScreen';
-import NewGroup from './src/chat/NewGroup';
-import AddParticipants from './src/chat/AddParticipants';
 
 import messaging from '@react-native-firebase/messaging';
 import { RequestUserPermission } from './src/core/helpers/NotificationService';
-import NotificationProvider from './src/core/contexts/NotificationProvider';
-import AutoLogin from './src/core/components/AutoLogin';
-import RNCallKeep from 'react-native-callkeep';
-import MeetingSettingScreen from './src/core/MeetingSettingScreen';
-import UserSettingScreen from './src/core/UserSettingScreen';
-import NormalSetting from './src/core/NormalSetting';
-import EditProfileScreen from './src/profile/EditProfileScreen';
-import ProfileScreen from './src/profile/ProfileScreen';
-import NotificationScreens from './src/notification/NotificationScreen';
 
-const Stack = createStackNavigator();
+import { Platform, AppState, PermissionsAndroid, View, Dimensions, StyleSheet } from 'react-native';
+import PushNotification from 'react-native-push-notification';
+import PushNotificationIOS from '@react-native-community/push-notification-ios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const NAVIGATION_IDS = ['call'];
+import {
+  configureNotifications,
+  processPendingBackgroundActions,
+  getFCMToken,
+  saveFCMToken,
+  requestNotificationPermissions,
+  onTokenRefresh,
+} from './NotificationService';
+import MainNavigator from './src/core/navigations/MainNavigator';
 
-function buildDeepLinkFromNotificationData(data) {
-  const navigationId = data?.navigationId;
-  if (navigationId && !navigationId.includes('ky92://')) {
-    console.warn('Unverified navigationId', navigationId);
-    return null;
+const requestNotificationPermission = async () => {
+  if (Platform.OS === 'android' && Platform.Version >= 33) {
+    await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+    );
   }
-  return navigationId;
-}
-
-const linking = {
-  prefixes: ['ky92://'],
-  config: {
-    screens: {
-      CALL: 'call/:chatId/:cameraStatus/:microphoneStatus',
-    },
-  },
-  async getInitialURL() {
-    const url = await Linking.getInitialURL();
-    if (typeof url === 'string') {
-      return url;
-    }
-    //getInitialNotification: When the application is opened from a quit state.
-    const message = await messaging().getInitialNotification();
-    const deeplinkURL = buildDeepLinkFromNotificationData(message?.data);
-    if (typeof deeplinkURL === 'string') {
-      return deeplinkURL;
-    }
-  },
-  subscribe(listener) {
-    const onReceiveURL = ({ url }) => listener(url);
-
-    // Listen to incoming links from deep linking
-    const linkingSubscription = Linking.addEventListener('url', onReceiveURL);
-
-    //onNotificationOpenedApp: When the application is running, but in the background.
-    const unsubscribe = messaging().onNotificationOpenedApp(remoteMessage => {
-      const url = buildDeepLinkFromNotificationData(remoteMessage.data);
-      if (typeof url === 'string') {
-        listener(url);
-      }
-    });
-
-    return () => {
-      linkingSubscription.remove();
-      unsubscribe();
-    };
-  },
 };
+// Create a Context to share the GlobalPage ref across components
+
+import { navigationRef } from './src/core/helpers/RootNavigation';
+import GlobalPage from './src/core/components/GlobalPage';
+import Button from './src/core/components/Button';
+
+export const GlobalPageContext = createContext(null);
 
 export default function App() {
+  const appState = useRef(AppState.currentState);
   Orientation.lockToPortrait();
 
   useEffect(() => {
     RequestUserPermission();
+    // Call this before creating the channel.
+    requestNotificationPermission();
     Strings.setLanguage('FR');
+
+
   }, [messaging]);
 
+  // Configure notifications on app start
   useEffect(() => {
-    const options = {
-      ios: {
-        appName: 'Solisakane',
-      },
-      android: {
-        alertTitle: 'Permissions required',
-        alertDescription:
-          'This application needs to access your phone accounts',
-        cancelButton: 'Annuler',
-        okButton: 'Accepter',
-        imageName: 'phone_account_icon',
-      },
+    // Set up app initialization
+    setupApp();
+
+    // Listen for app state changes (foreground, background, inactive)
+    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+
+    // Clean up on unmount
+    return () => {
+      appStateSubscription.remove();
     };
-    RNCallKeep.setup(options);
-    RNCallKeep.setAvailable(true);
+  }, []);
+
+  // Main setup function
+  const setupApp = async () => {
+    // Initialize notifications
+    initializeNotifications();
+
+    // Set up Firebase Cloud Messaging
+    await setupFirebaseMessaging();
+
+    // Check for any pending actions from background state
+    await checkPendingBackgroundActions();
+
+    // Reset badge count when app opens
+    updateBadgeCount(0);
+  };
+
+  // Initialize local notifications
+  const initializeNotifications = () => {
+    configureNotifications(handleNotification);
+  };
+
+  // Set up Firebase Cloud Messaging
+  const setupFirebaseMessaging = async () => {
+    try {
+      // Request permissions
+      const hasPermission = await requestNotificationPermissions();
+
+      if (hasPermission) {
+        console.log('Notification permissions granted');
+
+        // Get and save FCM token
+        const token = await getFCMToken();
+        if (token) {
+          console.log('FCM Token:', token);
+          await AsyncStorage.setItem('fcmToken', token);
+          await saveFCMToken(token); // Send to your backend
+        }
+
+        // Listen for token refresh
+        const unsubscribeTokenRefresh = onTokenRefresh(async (newToken) => {
+          console.log('FCM token refreshed:', newToken);
+          await saveFCMToken(newToken); // Send to your backend
+        });
+
+        // Handle foreground messages
+        const unsubscribeForegroundMessage = messaging().onMessage(async (remoteMessage) => {
+          console.log('Message received in foreground:', remoteMessage);
+          handleIncomingMessage(remoteMessage);
+        });
+
+        // Check for initial notification (app opened from killed state)
+        await checkInitialNotification();
+
+        // Return unsubscribe functions for cleanup
+        return () => {
+          unsubscribeTokenRefresh();
+          unsubscribeForegroundMessage();
+        };
+      }
+    } catch (error) {
+      console.error('Error setting up Firebase messaging:', error);
+    }
+  };
+
+  const handleAppStateChange = (nextAppState) => {
+    if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+      // App has come to the foreground
+      console.log('App has come to the foreground!');
+      updateBadgeCount(0); // Reset badge counter when app opens
+    }
+    appState.current = nextAppState;
+  };
+
+  // Process pending background actions
+  const checkPendingBackgroundActions = async () => {
+    try {
+      const pendingAction = await processPendingBackgroundActions();
+      if (pendingAction && pendingAction.type === 'call') {
+        console.log('Processing pending call action:', pendingAction.data);
+        // Navigate to call screen with the pending call data
+        if (navigationRef.current) {
+          navigationRef.current.navigate('IncomingCall', {
+            callData: pendingAction.data,
+            isIncoming: true
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error processing pending background actions:', error);
+    }
+  };
+
+
+  // Check if app was opened from a notification
+  const checkInitialNotification = async () => {
+    // Get notification that opened the app from killed state
+    const initialNotification = await messaging().getInitialNotification();
+
+    if (initialNotification) {
+      console.log('App opened from killed state by notification:', initialNotification);
+      handleDeepLinking(initialNotification.data);
+    }
+  };
+
+
+  // Handle incoming messages based on type
+  const handleIncomingMessage = (message) => {
+    const { data, notification } = message;
+    const notificationType = data?.type;
+
+    // Check if this is a call notification
+    if (notificationType === 'call') {
+      handleIncomingCall(data);
+    } else {
+      // Regular chat message or other notification
+      displayLocalNotification(notification?.title, notification?.body, data);
+    }
+  };
+
+  // Display a local notification
+  const displayLocalNotification = (title, body, data = {}) => {
+    const channelId = data.type === 'call' ? 'incoming-calls' : 'chat-messages';
+
+    PushNotification.localNotification({
+      channelId,
+      title,
+      message: body,
+      playSound: true,
+      soundName: data.type === 'call' ? 'ringtone' : 'default',
+      userInfo: data,
+      // For Android
+      smallIcon: 'ic_notification',
+      largeIcon: '',
+      // For iOS
+      category: data.type === 'call' ? 'callinvite' : 'message',
+    });
+
+    // Update badge count
+    updateBadgeCount();
+  };
+
+  // Handle incoming calls
+  const handleIncomingCall = (callData) => {
+    // console.log(callData)
+    // chatId,
+    // callerId,
+    // recipientId,
+    // callId,
+    // callType
+    const { chatId, caller_id, caller_name, call_id, video } = callData;
+
+    // Parse and transform the call data to match your IncomingCall expectations
+    const formattedCallData = {
+      chatId,
+      callId: call_id,
+      callType: video === 'true' ? 'video' : 'audio',
+      caller: {
+        id: caller_id,
+        name: caller_name,
+        profilePicture: callData.caller_avatar || null
+      }
+    };
+
+    // Navigate to call screen
+    if (navigationRef.current) {
+      navigationRef.current.navigate('INCOMING_CALL', {
+        callData: formattedCallData,
+        isIncoming: true
+      });
+    }
+  };
+
+  // Handle notifications when clicked
+  const handleNotification = (notification) => {
+    const data = Platform.OS === 'ios' ? notification.data : notification.data;
+
+    // Different handling based on notification type
+    if (data.type === 'call') {
+      // Handle user responding to call notification
+      handleCallAction(data);
+    } else {
+      // Regular notification - navigate to the appropriate screen
+      handleDeepLinking(data);
+    }
+  };
+
+  // Handle call acceptance or rejection
+  const handleCallAction = (callData) => {
+    if (callData.action === 'accept') {
+      // Navigate to call screen
+      if (navigationRef.current) {
+        navigationRef.current.navigate('INCOMING_CALL', {
+          callData,
+          isIncoming: true
+        });
+      }
+      console.log('Navigating to call screen with data:', callData);
+    } else {
+      // Reject call - notify server
+      console.log('Call rejected:', callData.call_id);
+      // Call your API to reject the call
+      // rejectCall(callData.call_id);
+    }
+  };
+
+  // Handle navigation based on notification data
+  const handleDeepLinking = (data) => {
+    if (!navigationRef.current) return;
+
+    if (data.chatId) {
+      // Navigate to specific chat
+      console.log('Navigate to chat:', data.chatId);
+      navigationRef.current.navigate('CHAT', { chatId: data.chatId });
+    } else if (data.screen) {
+      // Navigate to a specific screen
+      console.log('Navigate to screen:', data.screen);
+      navigationRef.current.navigate(data.screen, data.params);
+    }
+  };
+
+  // Update badge count for iOS and some Android launchers
+  const updateBadgeCount = async (manualCount = null) => {
+    let count;
+
+    if (manualCount !== null) {
+      count = manualCount;
+    } else {
+      // Get unread count from storage or increment
+      try {
+        const currentCount = await AsyncStorage.getItem('unreadCount');
+        count = currentCount ? parseInt(currentCount) + 1 : 1;
+        await AsyncStorage.setItem('unreadCount', count.toString());
+      } catch (error) {
+        console.log('Error updating badge count:', error);
+        count = 1;
+      }
+    }
+
+    // Set badge count
+    if (Platform.OS === 'ios') {
+      PushNotificationIOS.setApplicationIconBadgeNumber(count);
+    } else {
+      PushNotification.setApplicationIconBadgeNumber(count);
+    }
+  };
+
+  const globalPageRef = useRef(null);
+
+  // Initialize the global page when app loads
+  useEffect(() => {
+    if (globalPageRef.current) {
+      globalPageRef.current.init({
+        visible: false,
+        maximized: true,
+      });
+    }
   }, []);
 
   return (
-    <ToastProvider>
-      <ApiProvider>
-        <SocketProvider>
-          <UserProvider>
-            <ChatProvider>
-              <SafeAreaProvider>
-                <MenuProvider>
-                  <NavigationContainer
-                    linking={linking}
-                    fallback={<AutoLogin />}>
-                    <>
-                      <NotificationProvider>
-                        <Stack.Navigator initialRouteName={'SPLASH'}>
-                          <Stack.Group>
-                            <Stack.Screen
-                              name={'SPLASH'}
-                              component={SplashScreen}
-                              options={{
-                                headerShown: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name={'START'}
-                              component={StartScreen}
-                              options={{
-                                headerShown: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name={'EMAIL_CHECK'}
-                              component={EmailCheckScreen}
-                              options={{
-                                headerShown: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name={'OTP'}
-                              component={OtpScreen}
-                              options={{
-                                headerShown: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name={'EDIT_PASSWORD'}
-                              component={EditPasswordScreen}
-                              options={{
-                                headerShown: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name={'EDIT_NAME'}
-                              component={EditNameScreen}
-                              options={{
-                                headerShown: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name={'LOGIN'}
-                              component={Login}
-                              options={{
-                                headerShown: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name={'REGISTER'}
-                              component={Register}
-                              options={{
-                                headerShown: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name={'EDIT_PROFILE'}
-                              component={EditProfileScreen}
-                              options={{
-                                headerShown: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name={'PROFILE'}
-                              component={ProfileScreen}
-                              options={{
-                                headerShown: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name={'NOTIFICATION'}
-                              component={NotificationScreens}
-                              options={{
-                                headerShown: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name={'TAB'}
-                              component={TabScreen}
-                              options={{ headerShown: false }}
-                            />
-                            <Stack.Screen
-                              name="CHAT"
-                              component={Chat}
-                              options={{
-                                headerTitle : "",
-                                headerShadowVisible: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name="CALL"
-                              component={MeetingPage}
-                              options={{ headerShown: false }}
-                            />
-                            <Stack.Screen
-                              name="CHAT_SETTINGS"
-                              component={ChatSetting}
-                              options={{
-                                headerTitle: '',
-                                headerShadowVisible: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name="CONTACT"
-                              component={Contact}
-                              options={{
-                                headerTitle: '',
-                                headerShadowVisible: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name="PARTICIPANTS"
-                              component={DataList}
-                              options={{
-                                headerTitle: '',
-                                headerShadowVisible: false,
-                              }}
-                            />
-                          </Stack.Group>
-                          <Stack.Group
-                            screenOptions={{ presentation: 'containedModal' }}>
-                            <Stack.Screen
-                              name="NEWCHAT"
-                              component={NewChat}
-                              options={{ headerShown: false }}
-                            />
-                            <Stack.Screen
-                              name="NEWCONTACT"
-                              component={NewChat}
-                              options={{ headerShown: false }}
-                            />
-                            <Stack.Screen
-                              name="NEW_GROUP"
-                              component={NewGroup}
-                              options={{ headerShown: false }}
-                            />
-                            <Stack.Screen
-                              name="ADD_PARTICIPANTS"
-                              component={AddParticipants}
-                              options={{ headerShown: false }}
-                            />
-                            <Stack.Screen
-                              name="MEETING_SETTING"
-                              component={MeetingSettingScreen}
-                              options={{ headerShown: false }}
-                            />
-                            <Stack.Screen
-                              name="USER_SETTING"
-                              component={UserSettingScreen}
-                              options={{ headerShown: false }}
-                            />
-                            <Stack.Screen
-                              name="NORMAL_SETTING"
-                              component={NormalSetting}
-                              options={{ headerShown: false }}
-                            />
-                          </Stack.Group>
-                        </Stack.Navigator>
-                      </NotificationProvider>
-                    </>
-                  </NavigationContainer>
-                  <Toast ref={ref => (global['toast'] = ref)} />
-                </MenuProvider>
-              </SafeAreaProvider>
-            </ChatProvider>
-          </UserProvider>
-        </SocketProvider>
-      </ApiProvider>
-    </ToastProvider>
+    <GlobalPageContext.Provider value={{ globalPageRef }}>
+      <ToastProvider>
+        <ApiProvider>
+          <SocketProvider>
+            <UserProvider>
+              <ChatProvider>
+                <SafeAreaProvider>
+                  <MenuProvider>
+                    <NavigationContainer
+                      ref={navigationRef}>
+                      <MainNavigator />
+                    </NavigationContainer>
+                    <Toast ref={ref => (global['toast'] = ref)} />
+                  </MenuProvider>
+                </SafeAreaProvider>
+              </ChatProvider>
+            </UserProvider>
+          </SocketProvider>
+        </ApiProvider>
+      </ToastProvider>
+
+      {/* The global page component, accessible from any screen */}
+      {/* The global page component, accessible from any screen */}
+      <GlobalPage
+        ref={globalPageRef}
+        title="Global Information"
+        fullHeight={Dimensions.get('window').height * 0.95}
+        style={styles.globalPage}
+        videoBubbleContent={<View/>} // Default content for video bubble
+      />
+    </GlobalPageContext.Provider>
   );
 }
+
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  globalPage: {
+    // Additional styling for global page
+  },
+  globalContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

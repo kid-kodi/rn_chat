@@ -9,6 +9,11 @@ import DataItem from '../core/components/DataItem';
 import { useApi } from '../core/contexts/ApiProvider';
 import Button from '../core/components/Button';
 import { useChat } from '../core/contexts/ChatProvider';
+import CustomImageView from '../core/components/CustomImage';
+import { TimeAgo } from '../core/helpers/Utility';
+import { TouchableOpacity } from 'react-native';
+
+import Icon from "react-native-vector-icons/Feather";
 
 export default function Contact(props) {
     const api = useApi();
@@ -16,14 +21,24 @@ export default function Contact(props) {
     const { removeUserFromChat } = useChat();
 
     const [isLoading, setIsLoading] = useState(false);
-    const callee = props.route?.params?.callee;
-    const chat = props.route?.params?.chat;
+    const id = props.route?.params?.id;
 
+    const [callee, setCallee] = useState();
     const [commonChats, setCommonChats] = useState([]);
 
     useEffect(() => {
         (async () => {
-            const response = await api.get(`/api/chats/common/${callee?._id}`);
+            const response = await api.get(`/api/users/${id}`);
+            console.log(response)
+            if (response.success) {
+                setCallee(response.data);
+            }
+        })()
+    }, [id]);
+
+    useEffect(() => {
+        (async () => {
+            const response = await api.get(`/api/chats/common/${id}`);
             if (response.success) {
                 setCommonChats(response.chats);
             }
@@ -46,20 +61,40 @@ export default function Contact(props) {
     return (
         <Screen>
             <View style={styles.container}>
-                <ProfileImage
-                    size={80}
-                    uri={
-                        callee?.profilePicture &&
-                            callee?.profilePicture !== "" ?
-                            `${BASE_API_URL}/image/${callee?.profilePicture}` : null
+                <View style={styles.ImageContainer}>
+                    <CustomImageView
+                        source={`${BASE_API_URL}/image/${user.profilePicture}`}
+                        firstName={callee?.fullName}
+                        size={80}
+                        fontSize={40}
+                    />
+                    <Text style={styles.name}>{callee?.fullName}</Text>
+                    <Text style={styles.about}>Derniere connexion {TimeAgo(callee?.lastSeen)}</Text>
+                    {
+                        callee?.bio &&
+                        <Text>{callee?.bio}</Text>
                     }
-                    style={{ marginBottom: 20 }}
-                />
-                <Text style={styles.name}>{callee?.fullName}</Text>
-                {
-                    callee?.about &&
-                    <Text>{callee?.about}</Text>
-                }
+
+                </View>
+
+                {/* Section for some actions */}
+                {/* <View style={styles.section}>
+                    <TouchableOpacity
+                        style={styles.navigationItem}
+                        onPress={() => props.navigation.navigate('Help')}
+                    >
+                        <Icon name="phone" size={20} color="#999" />
+                        <Text style={styles.navigationLabel}>Appel audio</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.navigationItem}
+                        onPress={() => props.navigation.navigate('About')}
+                    >
+                        <Icon name="video" size={20} color="#999" />
+                        <Text style={styles.navigationLabel}>Appel video</Text>
+                    </TouchableOpacity>
+                </View> */}
 
 
                 {
@@ -82,7 +117,7 @@ export default function Contact(props) {
                 }
 
 
-                {
+                {/* {
                     chat && chat.isGroupChat &&
                         isLoading ?
                         <ActivityIndicator size={"small"} color={Colors.primary} /> :
@@ -90,7 +125,7 @@ export default function Contact(props) {
                             color={Colors.red}
                             onPress={removeFromChat}
                         />
-                }
+                } */}
             </View>
         </Screen>
     )
@@ -98,27 +133,61 @@ export default function Contact(props) {
 
 const styles = StyleSheet.create({
     container: {
-        paddingHorizontal: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginVertical: 20
+        flex: 1,
+        marginVertical: 20,
+    },
+    ImageContainer: {
+        justifyContent: "center",
+        alignItems: "center"
     },
     name: {
-        fontFamily: 'bold',
         fontSize: 20,
         letterSpacing: 0.3,
         fontWeight: "bold"
     },
     about: {
-        fontFamily: 'medium',
         fontSize: 16,
         letterSpacing: 0.3,
         color: Colors.grey
     },
     heading: {
-        fontFamily: 'bold',
         letterSpacing: 0.3,
         color: Colors.textColor,
         marginVertical: 8
-    }
+    },
+    infoSection: {
+        width: '100%',
+        paddingHorizontal: 20,
+        marginTop: 16,
+    },
+    section: {
+        backgroundColor: '#fff',
+        marginTop: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: '#eee',
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 12,
+    },
+    navigationItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        gap:12
+    },
+    navigationItemIcon: {
+        
+    },
+    navigationLabel: {
+        fontSize: 16,
+        color: '#333',
+    },
 });

@@ -6,20 +6,20 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import {BASE_API_URL} from '@env';
-import React, {useCallback, useState} from 'react';
+import { BASE_API_URL } from '@env';
+import React, { useCallback, useState } from 'react';
 import Screen from '../core/components/Screen';
-import Header from '../core/components/PageTitle';
+import Header from '../core/components/Header';
 import ProfileImage from '../core/components/ProfileImage';
 import Input from '../core/components/Input';
 
-import {useFormik} from 'formik';
+import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import Button from '../core/components/Button';
-import {useChat} from '../core/contexts/ChatProvider';
+import { useChat } from '../core/contexts/ChatProvider';
 import DataItem from '../core/components/DataItem';
 import Colors from '../core/constants/Colors';
-import {useUser} from '../core/contexts/UserProvider';
+import { useUser } from '../core/contexts/UserProvider';
 
 const chatSettingsSchema = Yup.object().shape({
   chatName: Yup.string().required('Champs requis !'),
@@ -28,10 +28,11 @@ const chatSettingsSchema = Yup.object().shape({
 export default function ChatSetting(props) {
   const chat = props.route.params?.chat;
 
-  const {user} = useUser();
-  const {updateChatData} = useChat();
+  const { user } = useUser();
+  const { updateChatData } = useChat();
 
   const [isLoading, setIsLoading] = useState(false);
+  let [defaultNumber, setDefaultNumber] = useState(2);
 
   const formik = useFormik({
     enableReinitialize: true,
@@ -63,7 +64,7 @@ export default function ChatSetting(props) {
 
   return (
     <Screen>
-      <Header title="Chat Settings" />
+      <Header leftText="Chat Settings" />
       <ScrollView contentContainerStyle={styles.scrollView}>
         <ProfileImage
           showEditButton={true}
@@ -91,14 +92,16 @@ export default function ChatSetting(props) {
             icon={'add'}
             type="button"
             onPress={() =>
-              props.navigation.navigate('NEWCHAT', {
+              props.navigation.navigate('MANAGE_USERS', {
                 isGroupChat: true,
                 chat,
               })
             }
           />
+          
+          
 
-          {chat.users.slice(0, 2).map(u => {
+          {chat.users.slice(0, defaultNumber).map(u => {
             return (
               <DataItem
                 key={u._id}
@@ -108,25 +111,20 @@ export default function ChatSetting(props) {
                 type={u._id !== user._id && 'link'}
                 onPress={() =>
                   u._id !== user._id &&
-                  props.navigation.navigate('CONTACT', {currentUser: u, chat})
+                  props.navigation.navigate('CONTACT', { currentUser: u, chat })
                 }
               />
             );
           })}
 
-          {chat.users.length > 2 && (
+          {chat.users.length > defaultNumber && (
             <View>
               <DataItem
                 type="link"
                 title={'Voir plus'}
                 hideImage={true}
                 onPress={() =>
-                  props.navigation.navigate('PARTICIPANTS', {
-                    title: 'Participants',
-                    data: chat.users,
-                    type: 'users',
-                    chat,
-                  })
+                  setDefaultNumber(defaultNumber++)
                 }
               />
             </View>
@@ -139,7 +137,7 @@ export default function ChatSetting(props) {
             disabled={formik.errors.name || formik.isSubmitting}
             onPress={formik.handleSubmit}
             isLoading={formik.isSubmitting}
-            style={{marginTop: 20}}
+            style={{ marginTop: 20 }}
           />
         )}
       </ScrollView>
@@ -149,7 +147,7 @@ export default function ChatSetting(props) {
         (isLoading ? (
           <ActivityIndicator size={'small'} color={Colors.primary} />
         ) : (
-          <View style={{paddingHorizontal: 20, paddingBottom: 10}}>
+          <View style={{ paddingHorizontal: 20, paddingBottom: 10 }}>
             <Button
               title="Quitter le chat"
               color={Colors.red}

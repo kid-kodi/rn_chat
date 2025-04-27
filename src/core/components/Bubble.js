@@ -6,10 +6,11 @@ import uuid from 'react-native-uuid';
 import Colors from '../constants/Colors';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useUser } from '../contexts/UserProvider';
-import { useChat } from '../contexts/ChatProvider';
 import { formatToTime } from '../helpers/Utility';
 import { BASE_API_URL } from '@env';
 import fontFamily from '../../assets/styles/fontFamily';
+import axiosInstance from '../networks/AxiosInstance';
+import { navigate } from '../helpers/RootNavigation';
 
 const MenuItem = props => {
 
@@ -23,9 +24,11 @@ const MenuItem = props => {
 
 export default function Bubble(props) {
     const { user } = useUser();
-    const { handleLike, handleUnLike } = useChat();
 
-    let { replyingTo, sender, text, type, likes, messageId, createdAt, setReply, removeMessage, file } = props;
+    let {
+        replyingTo, sender, text, type, messageType, likes, messageId,
+        createdAt, setReply, removeMessage, file, updateMessage, onPress
+    } = props;
 
     const bubbleStyle = { ...styles.container };
     const textStyle = { ...styles.text };
@@ -40,7 +43,7 @@ export default function Bubble(props) {
 
     let Container = View;
 
-    switch (type) {
+    switch (messageType) {
         case "system":
             textStyle.color = '#65644A';
             bubbleStyle.backgroundColor = Colors.beige;
@@ -89,10 +92,40 @@ export default function Bubble(props) {
         }
     }
 
+    const handleLike = async (messageId) => {
+        const response = await axiosInstance.put(`/api/messages/${messageId}/like`, {
+            userId: user._id,
+            type: 'like',
+        });
+        if (response.success) {
+            updateMessage(messageId, { likes: response.result.likes });
+        }
+    }
+
+
+
+    const handleUnLike = async messageId => {
+        const response = await axiosInstance.put(`/api/messages/${messageId}/unlike`, {
+            userId: user._id,
+            type: 'unlike',
+        });
+        if (response.success) {
+            updateMessage(messageId, { likes: response.result.likes });
+        }
+    };
+
+    const handleRemoveMessage = async messageId => {
+        const response = await axiosInstance.delete(`/api/messages/${messageId}`);
+        if (response.success) {
+            removeMessage(messageId);
+        }
+    };
 
     return (
         <View style={wrapperStyle}>
-            <Container onLongPress={() => menuRef.current.props.ctx.menuActions.openMenu(id.current)} style={{ width: '100%' }}>
+            <Container
+                onPress={() => onPress(type)}
+                onLongPress={() => menuRef.current.props.ctx.menuActions.openMenu(id.current)} style={{ width: '100%' }}>
                 <View style={bubbleStyle}>
 
                     {/* {
@@ -104,7 +137,7 @@ export default function Bubble(props) {
                         replyingTo &&
                         <Bubble
                             type="reply"
-                            text={replyingTo.content}
+                            text={replyingTo.message.content}
                             sender={replyingTo.user}
                         />
                     }
@@ -119,14 +152,11 @@ export default function Bubble(props) {
                     }
 
                     {
-                        createdAt && type !== "info" &&
+                        createdAt && messageType !== "info" &&
                         <Text style={styles.date}>
                             {formatToTime(createdAt)}
                         </Text>
                     }
-
-
-
 
                     <Menu name={id.current} ref={menuRef}>
                         <MenuTrigger />
@@ -136,7 +166,7 @@ export default function Bubble(props) {
                             {isUserMessage && !isLiked && <MenuItem text='Like message' icon={'thumbs-up'} onSelect={() => handleLike(messageId)} />}
                             {isUserMessage && isLiked && <MenuItem text='Unlke message' icon={'thumbs-down'} onSelect={() => handleUnLike(messageId)} />}
                             <MenuItem text='Reply' icon={'corner-up-left'} onSelect={setReply} />
-                            {user._id === sender._id && <MenuItem text='Delete' icon={'trash'} onSelect={removeMessage} />}
+                            {user._id === sender._id && <MenuItem text='Delete' icon={'trash'} onSelect={() => handleRemoveMessage(messageId)} />}
                         </MenuOptions>
                     </Menu>
                 </View>
@@ -164,7 +194,6 @@ const styles = StyleSheet.create({
     },
     date: {
         fontSize: 10,
-        color: Colors.lightGrey,
         textAlign: "right"
     },
     menuItemContainer: {

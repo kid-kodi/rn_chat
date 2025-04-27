@@ -4,8 +4,9 @@ import Colors from '../constants/Colors';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { TouchableOpacity } from 'react-native';
 import { useUser } from '../contexts/UserProvider';
-import Avatar from './Avatar';
 import { BASE_API_URL } from '@env';
+import CustomImageView from './CustomImage';
+import { moderateScale } from '../../assets/styles/responsiveSize';
 
 export default function Navbar({ navigation }) {
     const { user } = useUser();
@@ -16,14 +17,15 @@ export default function Navbar({ navigation }) {
                 onPress={() => {
                     navigation.navigate('PROFILE');
                 }} style={styles.left}>
-                <Avatar
-                size={42}
-                    letter={user?.fullName[0]}
-                    source={user.profilePicture ?
-                        `${BASE_API_URL}/image/${user.profilePicture}` : null} />
+                <CustomImageView
+                    source={`${BASE_API_URL}/image/${user.profilePicture}`}
+                    firstName={user?.fullName}
+                    size={32}
+                    fontSize={16}
+                />
                 <View style={styles.info}>
-                    <Text style={styles.infoPrimary}>{user.fullName}</Text>
-                    <Text>status</Text>
+                    <Text style={styles.infoPrimary} numberOfLines={1} ellipsizeMode="tail">{user.fullName}</Text>
+                    <Text style={styles.infoSecondary}>{user.status}</Text>
                 </View>
             </TouchableOpacity>}
             <View style={styles.right}>
@@ -31,7 +33,7 @@ export default function Navbar({ navigation }) {
                     onPress={() => {
                         navigation.navigate('NOTIFICATION');
                     }}>
-                    <Icon name={'notifications-outline'} size={30} color={Colors.lightGrey} />
+                    <Icon name={'notifications-outline'} size={30} color={Colors.textColor} />
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
@@ -46,7 +48,7 @@ const styles = StyleSheet.create({
         height: 70,
         alignItems: "center",
         rowGap: 16,
-        padding: 16,
+        padding: moderateScale(16),
         backgroundColor: Colors.white
     },
     left: {
@@ -58,7 +60,11 @@ const styles = StyleSheet.create({
     },
     infoPrimary: {
         fontWeight: "bold",
-        fontSize: 16
+        fontSize: 16,
+        color: Colors.textColor
+    },
+    infoSecondary: {
+        color: Colors.textColor
     },
     right: {
         justifyContent: 'space-between',

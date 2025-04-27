@@ -4,11 +4,12 @@ import {useApi} from './ApiProvider';
 
 import queryString from 'query-string';
 import {useSocket} from './SocketProvider';
+import { registerDeviceForNotifications } from '../../../NotificationService';
 
 export const UserContext = createContext();
 
 export default function UserProvider({children}) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isUserLoading, setIsUserLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState();
   const [token, setToken] = useState();
@@ -17,19 +18,19 @@ export default function UserProvider({children}) {
   const socket = useSocket();
 
   const autoLogin = async () => {
-    setIsLoading(true);
+    setIsUserLoading(true);
     const me = await api.get('/api/auth/me');
     if (me.user) {
       setUser(me.user);
       socket.emit('join_chat', me.user._id);
       let _fcmToken = await AsyncStorage.getItem('fcmToken');
-      console.log("++++ update tokn " + _fcmToken)
       if (_fcmToken) {
         // Update user fcmtoken
         setFcmToken(_fcmToken);
         await api.post('/api/auth/update-token', {fcmToken: _fcmToken});
+        await registerDeviceForNotifications(me.user._id)
       }
-      setIsLoading(false);
+      setIsUserLoading(false);
     }
     return me;
   };
@@ -41,6 +42,7 @@ export default function UserProvider({children}) {
       const me = await api.get('/api/auth/me');
       if (me.success) {
         socket.emit('join_chat', me.user._id);
+        await registerDeviceForNotifications(me.user._id)
         setUser(me.user);
       } else {
         setUser(null);
@@ -110,7 +112,7 @@ export default function UserProvider({children}) {
     <UserContext.Provider
       value={{
         user,
-        isLoading,
+        isUserLoading,
         autoLogin,
         setUser,
         login,

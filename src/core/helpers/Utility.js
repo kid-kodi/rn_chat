@@ -99,7 +99,7 @@ export const formatChatDate = (date) => {
   const inputDate = moment(date);
 
   if (inputDate.isSame(now, 'day')) {
-    return inputDate.format('h:mm'); // Today
+    return "Aujourd'hui"; // Today
   } else if (inputDate.isSame(now.subtract(1, 'days'), 'day')) {
     return 'Hier';
   } else if (inputDate.isSame(now, 'week')) {

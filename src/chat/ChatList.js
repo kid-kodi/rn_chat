@@ -24,8 +24,9 @@ import {
   formatToTime,
 } from '../core/helpers/Utility';
 
-export default function ChatList({ navigation }) {
-  const isFocused = useIsFocused();
+export default function ChatList({ route, navigation }) {
+  const chatId = route?.params?.chatId;
+
 
   const { user } = useUser();
   const api = useApi();
@@ -37,15 +38,14 @@ export default function ChatList({ navigation }) {
   const [unReadMessages, setUnreadMessages] = useState([]);
   const [users, setUsers] = useState([]);
 
-  const chatPressed = async chat => {
+  const chatPressed = async chatId => {
     navigation.navigate('CHAT', {
-      chatId: chat._id,
+      chatId,
     });
   };
 
   function updateConversationWithJoinButton(chatId, callerId, cameraStatus,
     microphoneStatus) {
-      console.log("##################first")
     setChats(prev =>
       prev.map(conv =>
         conv._id === chatId
@@ -69,6 +69,12 @@ export default function ChatList({ navigation }) {
     });
   }
 
+
+  useEffect(() => {
+    if (!chatId) return;
+    chatPressed(chatId);
+  }, [chatId]);
+
   useEffect(() => {
     socket.emit('join_chat', user._id);
 
@@ -79,6 +85,7 @@ export default function ChatList({ navigation }) {
     socket.on('new_message', values => {
       setChats(prevState => {
         const newState = prevState.map(obj => {
+          console.log(obj._id === values.chat._id)
           if (obj._id === values.chat._id) {
             return { ...obj, lastMessage: values };
           }
@@ -138,9 +145,9 @@ export default function ChatList({ navigation }) {
       )}
 
       {!isLoading && chats?.length > 0 && (
-        <View>
+        <View style={styles.chatList}>
           <FlatList
-            style={{ paddingVertical: 0, paddingHorizontal: 20 }}
+            style={{ paddingVertical: 0, paddingHorizontal: 16 }}
             data={chats}
             renderItem={({ item }) => {
               return (
@@ -159,9 +166,9 @@ export default function ChatList({ navigation }) {
                           .length
                       }
                       image={item?.image?.name}
-                      onPress={() => chatPressed(item)}
+                      onPress={() => chatPressed(item._id)}
                       ongoingCall={item.ongoingCall}
-                      joinCall={() =>joinCall(item)}
+                      joinCall={() => joinCall(item)}
                     />
                   ) : (
                     <DataItem
@@ -177,9 +184,9 @@ export default function ChatList({ navigation }) {
                           .length
                       }
                       image={item.users[0]?.profilePicture}
-                      onPress={() => chatPressed(item)}
+                      onPress={() => chatPressed(item._id)}
                       ongoingCall={item.ongoingCall}
-                      joinCall={() =>joinCall(item)}
+                      joinCall={() => joinCall(item)}
                     />
                   )}
                 </>
@@ -200,6 +207,10 @@ export default function ChatList({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  chatList: {
+    backgroundColor: Colors.white,
+    flexGrow: 1
+  },
   noResultsIcon: {
     marginBottom: 20,
   },

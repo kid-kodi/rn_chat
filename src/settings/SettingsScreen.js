@@ -2,10 +2,16 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import React from 'react'
 import { TouchableOpacity } from 'react-native'
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useUser } from '../core/contexts/UserProvider';
 
 export default function SettingsScreen({ navigation }) {
 
-    const handleLogout = () => { }
+    const { logout } = useUser();
+
+    const handleLogout = async () => {
+        await logout();
+        navigation.navigate("LOGIN");
+    }
 
     return (
         <ScrollView>
@@ -18,7 +24,7 @@ export default function SettingsScreen({ navigation }) {
                     <Text style={styles.navigationLabel}>Mon Compte</Text>
                     <Icon name="chevron-forward" size={20} color="#999" />
                 </TouchableOpacity>
-                <TouchableOpacity
+                {/* <TouchableOpacity
                     style={styles.navigationItem}
                     onPress={() => navigation.navigate('NOTIFICATIONS')}
                 >
@@ -39,11 +45,11 @@ export default function SettingsScreen({ navigation }) {
                 >
                     <Text style={styles.navigationLabel}>Inviter un proche</Text>
                     <Icon name="chevron-forward" size={20} color="#999" />
-                </TouchableOpacity>
+                </TouchableOpacity> */}
             </View>
 
             <View style={styles.section}>
-                <TouchableOpacity
+                {/* <TouchableOpacity
                     style={styles.navigationItem}
                     onPress={() => navigation.navigate('Help')}
                 >
@@ -57,7 +63,7 @@ export default function SettingsScreen({ navigation }) {
                 >
                     <Text style={styles.navigationLabel}>Apropos</Text>
                     <Icon name="chevron-forward" size={20} color="#999" />
-                </TouchableOpacity>
+                </TouchableOpacity> */}
 
                 <TouchableOpacity
                     style={[styles.navigationItem, styles.logoutButton]}

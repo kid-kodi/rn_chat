@@ -2,7 +2,19 @@
 import React from 'react';
 import { View, Image, StyleSheet, Text } from 'react-native';
 
+const getColorFromName = (name) => {
+  // Simple hash function to generate consistent color from name
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const color = `hsl(${hash % 360}, 70%, 60%)`;
+  return color;
+};
+
+
 const Avatar = ({ letter, source, size = 50, online }) => {
+  
   return (
     <View style={styles.container}>
       {source ? <Image

@@ -1,23 +1,29 @@
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React, { useState } from 'react'
 import Icon from 'react-native-vector-icons/Ionicons';
-import { moderateScale } from '../assets/styles/responsiveSize';
+import { moderateScaleVertical } from '../assets/styles/responsiveSize';
 import Modal from 'react-native-modal';
+import { useUser } from '../core/contexts/UserProvider';
+import { useChat } from '../core/contexts/ChatProvider';
+import { useSocket } from '../core/contexts/SocketProvider';
 import { BASE_API_URL } from '@env';
-import Avatar from '../core/components/Avatar';
+import CustomImageView from '../core/components/CustomImage';
 
 const actions = [
     { id: '1', label: 'Call', icon: 'call-outline' },
     { id: '2', label: 'Send Message', icon: 'chatbubble-ellipses-outline' },
     { id: '3', label: 'Video Call', icon: 'videocam-outline' },
     { id: '4', label: 'Share Contact', icon: 'share-social-outline' },
-    { id: '5', label: 'Add to Favorites', icon: 'star-outline' },
 ];
 
 
 
-export default function ContactItem({ item }) {
+export default function ContactItem({ item, navigation }) {
     const [isModalVisible, setModalVisible] = useState(false);
+
+    const { create } = useChat();
+    const { user } = useUser();
+    const socket = useSocket();
 
     const toggleModal = () => {
         setModalVisible(!isModalVisible);
@@ -35,13 +41,21 @@ export default function ContactItem({ item }) {
         alert('Edit profile image');
     };
 
+    const userPressed = async () => {
+        navigation.navigate('CHAT', {
+            userId: item._id,
+        });
+    };
+
     return (
         <>
-            <TouchableOpacity onPress={toggleModal} style={[styles.card]}>
-                <Avatar
-                    letter={item?.fullName[0]}
-                    source={!item.profilePicture ?
-                        `${BASE_API_URL}/image/${item.profilePicture}` : null} />
+            <TouchableOpacity onPress={userPressed} style={[styles.card]}>
+                <CustomImageView
+                    source={`${BASE_API_URL}/image/${item.profilePicture}`}
+                    firstName={item?.fullName}
+                    size={50}
+                    fontSize={25}
+                />
                 <View style={styles.cardBody}>
                     <Text style={styles.cardTitle}>{item.fullName}</Text>
                 </View>
@@ -91,7 +105,7 @@ export default function ContactItem({ item }) {
 
 const styles = StyleSheet.create({
     card: {
-        paddingVertical: moderateScale(16),
+        paddingVertical: moderateScaleVertical(8),
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'flex-start',

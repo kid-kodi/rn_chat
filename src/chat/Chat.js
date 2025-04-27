@@ -14,8 +14,9 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Icon from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import backgroundImage from '../assets/images/bg.jpeg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Colors from '../core/constants/Colors';
@@ -28,12 +29,10 @@ import ImagePicker from 'react-native-image-crop-picker';
 import AwesomeAlert from 'react-native-awesome-alerts';
 import { BASE_API_URL } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { HeaderButtons, Item } from 'react-navigation-header-buttons';
-import CustomHeaderButton from '../core/components/CustomHeaderButton';
 import { useSocket } from '../core/contexts/SocketProvider';
 import Typing from './Typing';
 import CommonStyles from '../core/constants/CommonStyles';
-import CallKeepImpl from '../core/utils/CallKeepImpl';
+import uuid from 'react-native-uuid';
 
 import moment from 'moment';
 import throttle from 'lodash.throttle';
@@ -41,23 +40,33 @@ import TextWithFont from '../core/components/TextWithFont';
 import { textScale } from '../assets/styles/responsiveSize';
 
 import { TimeAgo, formatChatDate } from '../core/helpers/Utility';
-import CustomHeaderTitle from '../core/components/CustomHeaderTitle';
+import axiosInstance from '../core/networks/AxiosInstance';
+import CustomImageView from '../core/components/CustomImage';
+import { useChat } from '../core/contexts/ChatProvider';
+import { GlobalPageContext } from '../../App';
+import MeetingPage from '../call/MeetingPage';
+import { navigate } from '../core/helpers/RootNavigation';
 
 
 export default function Chat({ navigation, route }) {
-  const { chatId } = route.params;
+  const { chatId, userId } = route.params;
+
+  const flatListRef = useRef(null);
+  const { globalPageRef } = useContext(GlobalPageContext);
 
   const api = useApi();
   const socket = useSocket();
   const { user } = useUser();
+  const { chat, setChat } = useChat();
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [page, setPage] = useState(1);
-  const [chat, setChat] = useState(null);
+  // const [chat, setChat] = useState(null);
   const [image, setImage] = useState();
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
+  const [messageType, setMessageType] = useState('text');
   const [replyingTo, setReplyingTo] = useState();
   const [tempImageUri, setTempImageUri] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -67,91 +76,85 @@ export default function Chat({ navigation, route }) {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const textInputRef = useRef(null);
-
-  // useSocketListeners();
-
-  const [receiverFullDetails, setReceriverFullDetails] = useState({
-    online: false,
-    lastSeen: null,
-  });
-
-  const typingTimeoutRef = useRef(null);
+  const [isCallLoading, setIsCallLoading] = useState(false);
+  const [chatInfo, setChatInfo] = useState();
 
   const [isTyping, setIsTyping] = useState(false); // To track if the current user is typing
 
-  const flatList = useRef();
+  const initiateCall = async (callType) => {
+    if (isCallLoading) return;
 
-  const handleFocus = () => {
-    if (textInputRef.current) {
-      textInputRef.current.focus();
+    try {
+      setIsCallLoading(true);
+
+      // Generate a unique call ID
+      const callId = uuid.v4();
+
+      // Prepare call data
+      const callData = {
+        chatId,
+        callId,
+        callType,
+        caller: user,
+      };
+
+      // Call the backend API to initiate call
+      await axiosInstance.post(`/api/call/initiate-call`, callData);
+
+      // Navigate to call screen
+      // navigation.navigate('CALL', {
+      //   chatId: callData.chatId,
+      //   cameraStatus: callData.callType === "video",
+      //   microphoneStatus: false,
+      // });
+
+      globalPageRef.current.init({
+        visible: true,
+        maximized: true,
+        videoBubble: false,
+        content: 
+          <MeetingPage 
+            chatId={callData.chatId} 
+            user={user}
+            cameraStatus={callData.callType === "video"} 
+            microphoneStatus={true}/>
+      });
+    } catch (error) {
+      console.error('Failed to initiate call:', error);
+      Alert.alert('Call Failed', 'Could not connect the call. Please try again later.');
+    } finally {
+      setIsCallLoading(false);
     }
   };
 
-  const handleBlur = () => {
-    if (textInputRef.current) {
-      textInputRef.current.blur();
-    }
-  };
-
-  const leaveRoom = () => {
-    socket.emit('leave_room', chatId);
-    navigation.goBack();
-  };
-
-  const initiateCall = async data => {
-    await api.post(`/api/call/initiate-call`, data);
-    socket.emit('call_started', {
-      chatId, callerId: user?._id, cameraStatus: data.cameraStatus,
-      microphoneStatus: data.microphoneStatus,
-    });
-
-    // CallKeepImpl.startCall({
-    //   handle: data.callee.fullName,
-    //   localizedCallerName: data.callee.fullName,
-    // });
-    navigation.navigate('CALL', {
-      chatId: data.chatId,
-      cameraStatus: data.cameraStatus,
-      microphoneStatus: data.microphoneStatus,
-    });
-    // CallKeepImpl.backToForeground()
-    return false;
-  };
 
   const joinCall = async data => {
-    
-
-    // CallKeepImpl.startCall({
-    //   handle: data.callee.fullName,
-    //   localizedCallerName: data.callee.fullName,
-    // });
     navigation.navigate('CALL', {
       chatId: data.chatId,
       cameraStatus: data.cameraStatus,
       microphoneStatus: data.microphoneStatus,
     });
-    // CallKeepImpl.backToForeground()
     return false;
   };
 
   useEffect(() => {
     socket.emit('join_room', chatId);
 
-    socket.on('send_message', data => {
+    socket.on('new_message', data => {
       handleIncomingMessage(data);
     });
 
     socket.on('user_online', ({ userId, online, lastSeen }) => {
-      if (userId == receiverIds) {
-        setReceriverFullDetails({
-          online: online,
+      if (userId == user._id) {
+        setChatInfo({
+          isOnline: online,
           lastSeen: !!lastSeen ? lastSeen : null,
         });
       }
     });
 
     return () => {
-      socket.removeListener('send_message');
+      socket.removeListener('new_message');
       socket.removeListener('user_online');
       socket.emit('leave_room', chatId);
     };
@@ -183,77 +186,48 @@ export default function Chat({ navigation, route }) {
 
   useEffect(() => {
     (async () => {
+      if (!chatId || !user?._id) return;
+
       loadMessages();
       const response = await api.get(`/api/chats/${chatId}`);
       if (response.success) {
         setChat(response.chat);
         const chat = response.chat;
-        const callee = chat?.users.find(u => u._id !== user._id);
-        const chatName = chat.isGroupChat ? chat.chatName : callee.fullName;
+        const callee = chat?.users.find(u => u._id !== user?._id);
 
-        navigation.setOptions({
-          headerTitle: () => {
-            return (
-              <CustomHeaderTitle
-                title={chatName}
-                subtitle={TimeAgo(chat?.lastMessage?.createdAt)}
-                onPress={() =>
-                  chat?.isGroupChat
-                    ? navigation.navigate('CHAT_SETTINGS', { chat })
-                    : navigation.navigate('CONTACT', { callee, chat })
-                }
-              />
-            );
-          },
-          headerRight: () => {
-            return (
-              <HeaderButtons HeaderButtonComponent={CustomHeaderButton}>
-                {!chat.ongoingCall && <Item
-                  title="Video"
-                  iconName="video"
-                  onPress={() => {
-                    initiateCall({
-                      chatId: chat._id,
-                      callerId: user._id,
-                      callee,
-                      cameraStatus: true,
-                      microphoneStatus: true,
-                    });
-                  }}
-                />}
-                {!chat.ongoingCall && <Item
-                  title="Phone"
-                  iconName="phone"
-                  onPress={() => {
-                    initiateCall({
-                      chatId: chat._id,
-                      callerId: user._id,
-                      callee,
-                      cameraStatus: false,
-                      microphoneStatus: true,
-                    });
-                  }}
-                />}
-                {chat.ongoingCall && <Item
-                  title="Rejoindre"
-                  iconName="phone"
-                  onPress={() => {
-                    joinCall({
-                      chatId: chat._id,
-                      callerId: user._id,
-                      callee,
-                      cameraStatus: false,
-                      microphoneStatus: true,
-                    });
-                  }}
-                />}
-              </HeaderButtons>
-            );
-          },
-        });
+        setChatInfo({
+          id: chat.isGroupChat ? chat?._id : callee?._id,
+          avatar: chat.isGroupChat ? chat.image?.name : callee?.profilePicture,
+          chatName: chat.isGroupChat ? chat?.chatName : callee?.fullName,
+          isOnline: chat.isGroupChat ?
+            `${chat.users.length} participants` :
+            `${callee.isOnline}, ${TimeAgo(chat?.lastMessage?.createdAt)}`,
+          isGroupChat: chat.isGroupChat,
+        })
       }
     })();
-  }, [chatId]);
+  }, [chatId, user?._id]);
+
+
+  useEffect(() => {
+    (async () => {
+      if (!userId) return;
+      // get to know if user chat exist
+      const response = await axiosInstance.get(`/api/chats/is-chat-exist/${userId}`);
+      if (response.isChatExist) {
+        navigation.navigate('CHATLIST', {
+          chatId: response.chat._id,
+        });
+      }
+      setChatInfo({
+        id: response.user._id,
+        avatar: response.user.profilePicture,
+        chatName: response.user.fullName,
+        isOnline: response.user.isOnline,
+        isGroupChat: false,
+      })
+    })()
+  }, [userId])
 
   const loadMessages = async () => {
     if (loading || !hasMore) return;
@@ -288,8 +262,36 @@ export default function Chat({ navigation, route }) {
     }
   };
 
+  const updateMessage = (messageId, messageMap) => {
+    setMessages(prevState => {
+
+      const newState = {};
+
+      for (const date in prevState) {
+        newState[date] = prevState[date].map(msg =>
+          msg._id === messageId ? { ...msg, ...messageMap } : msg
+        );
+      }
+    
+      return newState;
+    });
+  };
+
+  const removeMessage = (messageId) => {
+    setMessages(prevState => {
+
+      const newState = {};
+
+      for (const date in prevState) {
+        newState[date] = prevState[date].filter(msg => msg._id !== messageId);
+      }
+    
+      return newState;
+    });
+  }
+
   const renderItem = (message, i) => {
-    const isOwnMessage = message.sender._id === user._id;
+    const isOwnMessage = message?.sender?._id === user?._id;
 
     let messageType;
 
@@ -301,20 +303,42 @@ export default function Chat({ navigation, route }) {
       messageType = 'theirMessage';
     }
 
+    const onPress = (type) => {
+      switch (type) {
+        case "image":
+          navigate("GALLERY_VIEWER", { chatId, file : message?.file });
+          break;
+        case "reply":
+          // Scroll to message id
+          flatListRef.current?.scrollToIndex({ 
+            i, 
+            animated: true,
+            viewPosition: 0.5 // 0 (top), 0.5 (center), 1 (bottom)
+          });
+          break;
+      
+        default:
+          break;
+      }
+    }
+
     return (
       <Bubble
         key={message._id}
-        type={messageType}
+        messageType={messageType}
+        type={message.type}
         message={message}
         messageId={message._id}
         text={message.content}
         likes={message.likes}
         createdAt={message.createdAt}
         setReply={() => setReplyingTo(message)}
-        removeMessage={() => removeMessage(message)}
+        updateMessage={updateMessage}
+        removeMessage={removeMessage}
         replyingTo={message.replyTo}
         sender={message.sender}
         file={message.file}
+        onPress={onPress}
       />
     );
   };
@@ -346,20 +370,6 @@ export default function Chat({ navigation, route }) {
     hasMore,
   ]);
 
-  // const fetchUserDetails = async () => {
-  //   try {
-  //     const response = await api.get(`/api/users/${callee?._id}`);
-  //     if (response.success) {
-  //       setReceriverFullDetails({
-  //         online: !!response.data?.online ? response?.data?.online : false,
-  //         lastSeen: !!response.data?.lastSeen ? response?.data?.lastSeen : null,
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // };
-
   const sendMessage = useCallback(async () => {
     // If no current chat ID exists or there's no socket connection, exit the function
     if (!chatId || !socket) return;
@@ -370,7 +380,11 @@ export default function Chat({ navigation, route }) {
 
     try {
       const content = messageText;
+      const type = messageType;
+
       setMessageText('');
+      setMessageType('text');
+
       const { data } = await api.post(`/api/messages`, {
         chat: chatId,
         sender: user?._id,
@@ -380,24 +394,24 @@ export default function Chat({ navigation, route }) {
           user: replyingTo.sender._id,
         },
         file,
-        type: 'text',
+        type,
       });
 
       setReplyingTo(null);
       setImage(null);
       setFile(null);
-      handleIncomingMessage(data);
 
       socket.emit('send_message', {
         chatId: chat._id,
-        userId: user._id,
         senderId: user._id,
         message: data,
       });
+
+
       setIsSending(false);
     } catch (error) {
-      setErrorBannerText('Message failed to send');
-      setTimeout(() => setErrorBannerText(''), 5000);
+      // setErrorBannerText('Message failed to send');
+      // setTimeout(() => setErrorBannerText(''), 5000);
       setIsSending(false);
     }
   }, [messageText]);
@@ -433,6 +447,7 @@ export default function Chat({ navigation, route }) {
       })
         .then(async image => {
           setTempImageUri(image.path);
+          setMessageType("image");
         })
         .catch(error => {
           console.log('error riased', error);
@@ -453,6 +468,7 @@ export default function Chat({ navigation, route }) {
       })
         .then(async image => {
           setTempImageUri(image.path);
+          setMessageType("image");
         })
         .catch(error => {
           console.log('error riased', error);
@@ -488,6 +504,7 @@ export default function Chat({ navigation, route }) {
     if (response.success) {
       setFile(response.data);
       setImage({ uri: `${BASE_API_URL}/image/${response.data.name}` });
+      setMessageType("image");
 
       setIsLoading(false);
 
@@ -507,6 +524,19 @@ export default function Chat({ navigation, route }) {
     };
   }
 
+  const createFirstMessage = async () => {
+    const response = await axiosInstance.post(
+      `/api/chats/create-first-message/${userId}`, 
+      { users: [user._id, userId] }
+    );
+    if (response.success) {
+
+      navigation.navigate('CHATLIST', {
+        chatId: response.data._id,
+      });
+    }
+  };
+
   const handleTextInput = debounce(() => {
     stopTyping();
   }, 6000);
@@ -525,6 +555,67 @@ export default function Chat({ navigation, route }) {
         style={styles.screen}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={100}>
+        {chatInfo && <View style={styles.chatHeader}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#333" />
+            </TouchableOpacity>
+
+
+            <TouchableOpacity style={styles.headerInfoContainer} onPress={() =>
+              chatInfo?.isGroupChat
+                ? navigation.navigate('CHAT_SETTINGS', { id: chatInfo.id })
+                : navigation.navigate('CONTACT', { id: chatInfo.id })
+            }>
+              <View style={styles.headerAvatar}>
+                <CustomImageView
+                  source={`${BASE_API_URL}/image/${chatInfo.avatar}`}
+                  firstName={chatInfo?.chatName}
+                  size={40}
+                  fontSize={20}
+                />
+              </View>
+
+              <View style={styles.headerInfo}>
+                <Text style={styles.headerName}>{chatInfo.chatName}</Text>
+                <Text style={[
+                  styles.headerStatus,
+                  chatInfo.isOnline ? styles.onlineStatus : styles.offlineStatus
+                ]}>
+                  {chatInfo.isOnline ? 'Online' : 'Offline'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.headerActions}>
+            {chat && !chat.ongoingCall && <>
+              <TouchableOpacity style={styles.headerButton} onPress={() => initiateCall('audio')}>
+                <Icon name="phone" size={20} color="#333" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.headerButton} onPress={() => initiateCall('video')}>
+                <Icon name="video" size={20} color="#333" />
+              </TouchableOpacity>
+            </>}
+            {chat && chat.ongoingCall && <TouchableOpacity style={styles.headerButton} onPress={() => {
+              joinCall({
+                chatId: chat._id,
+                callerId: user._id,
+                callee,
+                cameraStatus: false,
+                microphoneStatus: true,
+              });
+            }}>
+              <Text>Rejoindre</Text>
+            </TouchableOpacity>}
+            <TouchableOpacity style={styles.headerButton}>
+              <Icon name="more-vertical" size={20} color="#333" />
+            </TouchableOpacity>
+          </View>
+        </View>}
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ImageBackground
             source={backgroundImage}
@@ -534,6 +625,7 @@ export default function Chat({ navigation, route }) {
             {groupedMessages && (
               <View>
                 <FlatList
+                ref={flatListRef}
                   style={{ padding: 20 }}
                   data={groupedMessages}
                   renderItem={({ item }) => (
@@ -573,6 +665,7 @@ export default function Chat({ navigation, route }) {
               onPress={() => {
                 setImage(null);
                 setFile(null);
+                setMessageType("text");
               }}>
               <Icon name="x-circle" size={24} color={Colors.blue} />
             </TouchableOpacity>
@@ -581,7 +674,7 @@ export default function Chat({ navigation, route }) {
 
         {isTyping && <Typing />}
 
-        <View style={styles.inputContainer}>
+        {chat && <View style={styles.inputContainer}>
           <TouchableOpacity style={styles.mediaButton} onPress={pickImage}>
             <Icon name="plus" size={24} color={Colors.blue} />
           </TouchableOpacity>
@@ -646,7 +739,19 @@ export default function Chat({ navigation, route }) {
               </View>
             }
           />
-        </View>
+        </View>}
+
+        {
+          userId && 
+          <View style={styles.firstMessageContainer}>
+            <View style={styles.firstMessage}>
+              <Text style={styles.firstMessageEmote}>Dit Salut! 👋 Hi there! Just reaching out to connect.</Text>
+              <TouchableOpacity style={styles.firstMessageButton} onPress={createFirstMessage}>
+                <Text style={styles.firstMessageText}>Envoyer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        }
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -691,47 +796,250 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
   },
+  chatHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  backButton: {
+    marginRight: 12,
+  },
+  headerInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e6f2fe',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  headerAvatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1a73e8',
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  headerName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  headerStatus: {
+    fontSize: 12,
+  },
+  onlineStatus: {
+    color: '#4CAF50',
+  },
+  offlineStatus: {
+    color: '#8a8a8a',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  firstMessageContainer: {
+    flexDirection: "column",
+    alignItems: "center",
+    textAlign: "center",
+  },
+  firstMessage: {
+    flexDirection: "column",
+    alignItems: "center",
+    textAlign: "center",
+    padding: 20,
+  },
+  firstMessageEmote: {
+    flexDirection: "column",
+    alignItems: "center",
+    textAlign: "center",
+    paddingHorizontal: 16,
+  },
+  firstMessageButton: {
+    flexDirection: "column",
+    alignItems: "center",
+    textAlign: "center",
+    paddingHorizontal: 16,
+    marginTop: 10,
+    borderColor: Colors.lightGrey,
+    padding: 12,
+    borderRadius: 50,
+    backgroundColor: Colors.blue,
+    color: Colors.white
+  },
+  firstMessageText: {
+    color: Colors.white
+  }
 });
 
+
+// import { StyleSheet, Text, View } from 'react-native'
+// import React, { useEffect, useState } from 'react'
+// import ChatHeader from './ChatHeader'
+// import ChatMessages from './ChatMessages'
+// import ChatInput from './ChatInput'
+// import { useSocket } from '../core/contexts/SocketProvider'
+// import { useUser } from '../core/contexts/UserProvider'
+// import axiosInstance from '../core/networks/AxiosInstance'
+
+// export default function Chat({ navigation, route }) {
+//   const { chatId, userId } = route.params;
+
+//   const { user } = useUser();
+//   const socket = useSocket();
+
+//   const [messages, setMessages] = useState([]);
+//   const [loadingMore, setLoadingMore] = useState(false);
+//   const [cursor, setCursor] = useState(null);
+//   const [hasMore, setHasMore] = useState(true);
+
+//   useEffect(() => {
+//     loadMessages();
+//   }, []);
+
+//   const loadMessages = async () => {
+//     if (loadingMore || !hasMore) return;
+
+//     setLoadingMore(true);
+
+//     try {
+//       const response = await axiosInstance.get(
+//         `api/messages/${chatId}/group?before=${cursor || new Date().toISOString()}&limit=50`
+//       );
+
+//       if (response.length === 0) {
+//         setHasMore(false);
+//       } else {
+//         // setItems(prev => [...response, ...prev]);
+//         setMessages((prev) => [...response, ...prev]);
+
+//         const oldestMsg = response
+//           .filter(item => item.type === 'message')
+//           .at(-1);
+
+//         if (oldestMsg) {
+//           setCursor(oldestMsg.message.createdAt);
+//         }
+//       }
+//     } catch (err) {
+//       console.error('Failed to load messages:', err);
+//     }
+
+//     setLoadingMore(false);
+//   };
+
+//   const handleIncomingMessage = (msgPayload) => {
+//     const { message } = msgPayload;
+
+//     const msgDate = message.createdAt.split('T')[0];
+//     const lastDateItem = messages.find(
+//       (item) => item.type === 'date' && item.date.split('T')[0] === msgDate
+//     );
+
+//     const newItems = [];
+
+    
+
+//     // Insert new message
+//     newItems.push({ type: 'message', message });
+
+//     // Insert date separator if not already present
+//     if (!lastDateItem) {
+//       newItems.push({ type: 'date', date: msgDate });
+//     }
+
+//     // Update chat (add at the top if list is inverted)
+//     setMessages((prev) => [...newItems, ...prev]);
+//   };
+
+//   const sendMessage = (data) => {
+//     const newMsg = {
+//       chat: chatId,
+//       content: data.content,
+//       sender: user?._id,
+//       type: data.type,
+//       createdAt: new Date().toISOString(),
+//     };
+
+//     // Optimistic UI (instant add)
+//     handleIncomingMessage({ message: newMsg });
+
+//     // Emit to server
+//     // socket.emit('send_message', newMsg);
+//     socket.emit('send_message', {
+//       chatId,
+//       senderId: user._id,
+//       message: newMsg,
+//     });
+//   };
+
+//   useEffect(() => {
+//     socket.emit('join_room', chatId);
+
+//     socket.on('send_message', newMsg => {
+//       handleIncomingMessage({ message: newMsg });
+//     });
+
+//     socket.on('user_online', ({ userId, online, lastSeen }) => {
+//       if (userId == receiverIds) {
+//         setChatInfo({
+//           isOnline: online,
+//           lastSeen: !!lastSeen ? lastSeen : null,
+//         });
+//       }
+//     });
+
+//     return () => {
+//       socket.removeListener('send_message');
+//       socket.removeListener('user_online');
+//       socket.emit('leave_room', chatId);
+//     };
+//   }, []);
+
+//   return (
+//     <View style={styles.chatContainer}>
+//       <ChatHeader
+//         navigation={navigation}
+//         chatId={chatId}
+//         userId={userId}
+//         ongoingCall={false}
+//       />
+//       <ChatMessages
+//         chatId={chatId}
+//         messages={messages}
+//         loadMessages={loadMessages}
+//         loadingMore={loadingMore}
+//       />
+//       <ChatInput
+//         chatId={chatId}
+//         sendMessage={sendMessage} />
+//     </View>
+//   )
+// }
+
 // const styles = StyleSheet.create({
-//   container: {
+//   chatContainer: {
 //     flex: 1,
-//     flexDirection: 'column',
-//   },
-//   backgroundImage: {
-//     flex: 1,
-//   },
-//   inputContainer: {
-//     flexDirection: 'row',
-//     paddingVertical: 8,
-//     paddingHorizontal: 10,
-//     height: 50,
-//   },
-//   textbox: {
-//     flex: 1,
-//     borderWidth: 1,
-//     borderRadius: 50,
-//     borderColor: Colors.lightGrey,
-//     marginHorizontal: 15,
-//     paddingHorizontal: 12,
-//   },
-//   mediaButton: {
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     width: 35,
-//   },
-//   sendButton: {
-//     backgroundColor: Colors.blue,
-//     borderRadius: 50,
-//     padding: 8,
-//   },
-//   popupTitleStyle: {
-//     fontFamily: 'medium',
-//     letterSpacing: 0.3,
-//     color: Colors.textColor,
-//   },
-//   image: {
-//     width: 200,
-//     height: 200,
-//   },
-// });
+//     flexDirection: "column"
+//   }
+// })

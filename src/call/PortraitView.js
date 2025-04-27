@@ -6,6 +6,8 @@ import { MyStreamWindow, PeerWindow } from '../core/components/MeetingWindows';
 import { MediaStream } from 'react-native-webrtc';
 import Orientation from 'react-native-orientation-locker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { TouchableOpacity } from 'react-native';
+import FontAwesome5Icon from 'react-native-vector-icons/FontAwesome5';
 
 export default PortraitView = memo(function ({
     width,
@@ -257,7 +259,7 @@ export default PortraitView = memo(function ({
               onPress={() => {
                 setShowSmall('toShow');
               }}>
-              <FontAwesome5
+              <FontAwesome5Icon
                 name={'window-maximize'}
                 color={smallMic ? 'white' : 'black'}
                 size={15}

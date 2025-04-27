@@ -1,89 +1,259 @@
-import {View, Text, StyleSheet, Modal, Pressable} from 'react-native';
-import React from 'react';
-import Feather from 'react-native-vector-icons/Feather';
+import React, { useState, useEffect, useContext } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  Vibration,
+  Dimensions,
+  Animated,
+} from 'react-native';
+// import Sound from 'react-native-sound';
+// import { Phone, X } from 'react-native-feather';
+import Icon from 'react-native-vector-icons/Feather';
 
-export default function IncomingCall({userName, isCalling, onDecline, onAccept}) {
+import { BASE_API_URL } from '@env';
+import CustomImageView from '../core/components/CustomImage';
+import axiosInstance from '../core/networks/AxiosInstance';
+import Colors from '../core/constants/Colors';
+import { GlobalPageContext } from '../../App';
+import MeetingPage from './MeetingPage';
+import { useUser } from '../core/contexts/UserProvider';
+
+
+const IncomingCall = ({
+  route, navigation
+}) => {
+  // const [ringtone, setRingtone] = useState(null);
+  // const [vibrationPattern] = useState([1000, 2000, 3000]);
+  const pulseAnim = new Animated.Value(1);
+  const callData = route.params.callData;
+
+  const { globalPageRef } = useContext(GlobalPageContext);
+  const { user } = useUser();
+
+  // Set up animation
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.2,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  // Set up ringtone and vibration
+  useEffect(() => {
+    // Initialize ringtone
+    // Sound.setCategory('Playback');
+    // const tone = new Sound('ringtone.mp3', Sound.MAIN_BUNDLE, (error) => {
+    //   if (error) {
+    //     console.log('Failed to load ringtone', error);
+    //     return;
+    //   }
+    //   tone.setNumberOfLoops(-1); // Loop indefinitely
+    //   tone.play();
+    //   setRingtone(tone);
+    // });
+
+    // Start vibration
+    // Vibration.vibrate(vibrationPattern, true);
+
+    // Clean up on unmount
+    // return () => {
+    //   if (ringtone) {
+    //     ringtone.stop();
+    //     ringtone.release();
+    //   }
+    //   Vibration.cancel();
+    // };
+  }, []);
+
+  const handleAccept = async () => {
+    try {
+      // setCallState('connecting');
+
+      // Emit socket event to accept call
+      // socket.emit('call:accept', {
+      //   callId,
+      //   recipientId: caller.id,
+      // });
+
+      // Update call status in the backend
+      await axiosInstance.post(
+        `/api/call/update-call`,
+        {
+          callId: callData.callId,
+          status: 'accepted'
+        }
+      );
+
+      globalPageRef.current.init({
+        visible: true,
+        maximized: true,
+        videoBubble: false,
+        content:
+          <MeetingPage
+            chatId={callData.chatId}
+            user={user}
+            cameraStatus={callData.callType === "video"}
+            microphoneStatus={true} />
+      });
+
+      // navigation.navigate('CALL', {
+      //   chatId: callData.chatId,
+      //   cameraStatus: callData.callType === "video",
+      //   microphoneStatus: false,
+      // });
+
+      // setCallState('connected');
+      // startCallTimer();
+
+      // The caller will send the offer once they receive the accept event
+    } catch (error) {
+      console.error('Failed to accept call:', error);
+      // handleCallFailed('Failed to connect');
+    }
+  };
+
+  const handleDecline = async () => {
+    await axiosInstance.post(`/api/call/update-call`, { callId: callData.callId, status: 'declined' });
+
+    navigation.goBack();
+    // if (ringtone) {
+    //   ringtone.stop();
+    //   ringtone.release();
+    // }
+    // Vibration.cancel();
+    // onDecline();
+  };
+
   return (
-    <Modal transparent={true} animationType="slide" visible={!!isCalling}>
-      <View style={styles.bg}>
-        <Text style={styles.name}>{userName}</Text>
-        <Text style={styles.phoneNumber}>Appel Entrant...</Text>
-
-        <View style={[styles.row, {marginTop: 'auto'}]}>
-          {/* <View style={styles.iconContainer}>
-            <Ionicons name="alarm" color="white" size={30} />
-            <Text style={styles.iconText}>Remind me</Text>
-          </View>
-          <View style={styles.iconContainer}>
-            <Entypo name="message" color="white" size={30} />
-            <Text style={styles.iconText}>Message</Text>
-          </View> */}
-        </View>
-
-        <View style={styles.row}>
-          {/* Decline Button */}
-          {onDecline && <Pressable onPress={onDecline} style={styles.iconContainer}>
-            <View style={styles.iconButtonContainer}>
-              <Feather name="x" color="white" size={40} />
-            </View>
-            <Text style={styles.iconText}>Refuser</Text>
-          </Pressable>}
-
-          {/* Accept Button */}
-          {onAccept && <Pressable onPress={onAccept} style={styles.iconContainer}>
-            <View
-              style={[
-                styles.iconButtonContainer,
-                {backgroundColor: '#2e7bff'},
-              ]}>
-              <Feather name="check" color="white" size={40} />
-            </View>
-            <Text style={styles.iconText}>Accepter</Text>
-          </Pressable>}
-        </View>
+    <View style={styles.container}>
+      <View style={styles.callInfo}>
+        <Text style={styles.callStatus}>Appel Entrant</Text>
+        <Animated.View
+          style={[
+            styles.avatarContainer,
+            { transform: [{ scale: pulseAnim }] }
+          ]}
+        >
+          <CustomImageView
+            source={`${BASE_API_URL}/image/${callData.caller.profilePicture}`}
+            firstName={callData.caller?.name}
+            size={120}
+            fontSize={60}
+          />
+        </Animated.View>
+        <Text style={styles.callerName}>{callData.caller.name}</Text>
       </View>
-    </Modal>
-  )
-}
 
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.declineButton]}
+          onPress={handleDecline}
+        >
+          <Icon name='x' size={28} color={Colors.white} />
+          <Text style={styles.buttonText}>Refuser</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionButton, styles.acceptButton]}
+          onPress={handleAccept}
+        >
+          <Icon name='check' size={28} color={Colors.white} />
+          <Text style={styles.buttonText}>Accepter</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const { width, height } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-  name: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: 'white',
-    marginTop: 100,
-    marginBottom: 15,
-  },
-  phoneNumber: {
-    fontSize: 20,
-    color: 'white',
-  },
-  bg: {
-    backgroundColor: '#000',
+  container: {
     flex: 1,
-    alignItems: 'center',
-    padding: 10,
-    paddingBottom: 50,
+    backgroundColor: '#121212',
+    justifyContent: 'space-between',
+    padding: 20,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
-
-  row: {
-    width: '100%',
+  callInfo: {
+    alignItems: 'center',
+    marginTop: height * 0.05,
+  },
+  callStatus: {
+    color: '#FFF',
+    fontSize: 20,
+    marginBottom: 30,
+    opacity: 0.7,
+  },
+  avatarContainer: {
+    marginBottom: 20,
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+  },
+  defaultAvatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#3498db',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 48,
+    color: '#FFF',
+    fontWeight: 'bold',
+  },
+  callerName: {
+    color: '#FFF',
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  callerNumber: {
+    color: '#FFF',
+    fontSize: 18,
+    opacity: 0.8,
+  },
+  actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    marginBottom: 30,
   },
-  iconContainer: {
+  actionButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 20,
   },
-  iconText: {
-    color: 'white',
-    marginTop: 10,
+  declineButton: {
+    backgroundColor: '#e74c3c',
   },
-  iconButtonContainer: {
-    backgroundColor: 'red',
-    padding: 15,
-    borderRadius: 50,
-    margin: 10,
+  acceptButton: {
+    backgroundColor: '#2ecc71',
+  },
+  buttonText: {
+    color: '#FFF',
+    marginTop: 5,
+    fontSize: 12,
   },
 });
+
+export default IncomingCall;

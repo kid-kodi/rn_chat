@@ -1,14 +1,14 @@
-import {createContext, useContext, useEffect, useState} from 'react';
-import {useApi} from './ApiProvider';
-import {useUser} from './UserProvider';
-import {useSocket} from './SocketProvider';
-import {compareDates} from '../helpers/Utility';
-import {useNavigation} from '@react-navigation/native';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { useApi } from './ApiProvider';
+import { useUser } from './UserProvider';
+import { useSocket } from './SocketProvider';
+import { compareDates } from '../helpers/Utility';
+import { useNavigation } from '@react-navigation/native';
 
 const ChatContext = createContext();
 
-export default function ChatProvider({children}) {
-  const {user} = useUser();
+export default function ChatProvider({ children }) {
+  const { user } = useUser();
   const socket = useSocket();
   const api = useApi();
   const [currentChat, setCurrentChat] = useState();
@@ -18,6 +18,7 @@ export default function ChatProvider({children}) {
   const [unReadMessages, setUnreadMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [showBubble, setShowBubble] = useState(false);
 
   // console.log("is Cocket ++++ ++++",socket && socket.connected)
 
@@ -47,12 +48,12 @@ export default function ChatProvider({children}) {
     setIsTyping(false);
   };
 
-  const handleOnMessageReceived = ({message}) => {
+  const handleOnMessageReceived = ({ message }) => {
     console.log('#########chat');
     console.log(chat);
     if (chat?._id === message.chat._id) {
       updateMessageList(message);
-      updateChat(chat._id, {lastMessage: message});
+      updateChat(chat._id, { lastMessage: message });
     } else if (chat?._id !== message.chat._id) {
       setUnreadMessages(prev => [message, ...prev]);
     }
@@ -110,7 +111,7 @@ export default function ChatProvider({children}) {
     });
 
     if (response.success) {
-      updateChat(chatId, {lastMessage: response.data});
+      updateChat(chatId, { lastMessage: response.data });
     }
     return response;
   };
@@ -129,7 +130,7 @@ export default function ChatProvider({children}) {
       const newState = prevState.map(obj => {
         // 👇️ if id equals 2, update the country property
         if (obj._id === messageId) {
-          return {...obj, ...messageMap};
+          return { ...obj, ...messageMap };
         }
 
         // 👇️ otherwise return the object as is
@@ -141,12 +142,13 @@ export default function ChatProvider({children}) {
   };
 
   const updateChat = (chatId, messageMap) => {
+
     // 👇️ passing function to setData method
     setChats(prevState => {
       const newState = prevState.map(obj => {
         // 👇️ if id equals 2, update the country property
         if (obj._id === chatId) {
-          return {...obj, ...messageMap};
+          return { ...obj, ...messageMap };
         }
 
         // 👇️ otherwise return the object as is
@@ -163,7 +165,7 @@ export default function ChatProvider({children}) {
       type: 'like',
     });
     if (response.success) {
-      updateMessage(messageId, {likes: response.result.likes});
+      updateMessage(messageId, { likes: response.result.likes });
     }
   };
 
@@ -173,7 +175,7 @@ export default function ChatProvider({children}) {
       type: 'unlike',
     });
     if (response.success) {
-      updateMessage(messageId, {likes: response.result.likes});
+      updateMessage(messageId, { likes: response.result.likes });
     }
   };
 
@@ -223,6 +225,16 @@ export default function ChatProvider({children}) {
     });
   }, []);
 
+  // Toggle showing the bubble when minimizing
+  const minimizeCall = () => {
+    setShowBubble(true);
+  };
+
+  // Hide bubble when returning to call screen
+  const maximizeCall = () => {
+    setShowBubble(false);
+  };
+
   return (
     <ChatContext.Provider
       value={{
@@ -247,6 +259,9 @@ export default function ChatProvider({children}) {
         updateChatData,
         removeUserFromChat,
         removeMessage,
+        showBubble,
+        minimizeCall,
+        maximizeCall
       }}>
       {children}
     </ChatContext.Provider>

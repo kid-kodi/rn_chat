@@ -1,27 +1,26 @@
-import {View, Text, Animated, StyleSheet, Alert} from 'react-native';
-import React, {useEffect, useRef, useState} from 'react';
+import { View, Text, Animated, StyleSheet, Alert } from 'react-native';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import Header from './Header';
 import Subtitle from './Subtitle';
 import Footer from './Footer';
-import {MeetingVariable} from '../MeetingVariable';
-import {closeMediaStream} from '../core/helpers/media/MediaUtils';
+import { MeetingVariable } from '../MeetingVariable';
+import { closeMediaStream } from '../core/helpers/media/MediaUtils';
 import RNSwitchAudioOutput from 'react-native-switch-audio-output';
 import GestureRecognizer from 'react-native-swipe-gestures';
 import GridView from './GridView';
 import PortraitView from './PortraitView';
 import Orientation from 'react-native-orientation-locker';
-import {useUser} from '../core/contexts/UserProvider';
-import {useCallKeep} from '../core/contexts/CallKeepProvider';
-import {clearMeetingVariable} from '../core/service/MeetingService';
-import {MyAlert} from '../core/components/MyAlert';
-import {TextButton} from '../core/components/MyButton';
+import { clearMeetingVariable } from '../core/service/MeetingService';
+import { MyAlert } from '../core/components/MyAlert';
+import { TextButton } from '../core/components/MyButton';
 import CheckBox from '@react-native-community/checkbox';
-import {useApi} from '../core/contexts/ApiProvider';
 import CallKeepImpl from '../core/utils/CallKeepImpl';
+import axiosInstance from '../core/networks/AxiosInstance';
+import { GlobalPageContext } from '../../App';
 
-export default function MeetingPage({navigation, route}) {
-  const api = useApi();
-  const {cameraStatus, microphoneStatus, chatId} = route.params;
+export default function MeetingPage({ cameraStatus, microphoneStatus, chatId, user }) {
+
+  const { globalPageRef } = useContext(GlobalPageContext);
 
   const [barHeight, setBarHeight] = useState(new Animated.Value(0));
   const [width, setWidth] = useState(300);
@@ -56,27 +55,16 @@ export default function MeetingPage({navigation, route}) {
   const [chatName, setChatName] = useState('');
   const currentChat = useRef();
 
-  const {user} = useUser();
-
   const backAction = () => {
     setModalVisible(true);
     return true;
-  };
-
-  const handleBack = () => {
-    navigation.addListener('beforeRemove', e => {
-      if (e.data.action.type === 'GO_BACK') {
-        e.preventDefault();
-        backAction();
-      }
-    });
   };
 
   useEffect(() => {
     (async () => {
       if (!chatId) return;
 
-      const {chat} = await api.get(`/api/chats/${chatId}`);
+      const { chat } = await axiosInstance.get(`/api/chats/${chatId}`);
 
       if (chat) currentChat.current = chat;
 
@@ -99,8 +87,6 @@ export default function MeetingPage({navigation, route}) {
         mutedByHost,
       );
 
-      handleBack();
-
       Orientation.unlockAllOrientations();
       RNSwitchAudioOutput.selectAudioOutput(RNSwitchAudioOutput.AUDIO_SPEAKER);
 
@@ -119,7 +105,7 @@ export default function MeetingPage({navigation, route}) {
         }
       } catch (e) {
         console.log(e)
-        toast.show(e, {type: 'danger', duration: 1300, placement: 'top'});
+        toast.show(e, { type: 'danger', duration: 1300, placement: 'top' });
       }
     })();
   }, []);
@@ -152,7 +138,7 @@ export default function MeetingPage({navigation, route}) {
   };
 
   const getMainContainerScale = event => {
-    let {width, height} = event.nativeEvent.layout;
+    let { width, height } = event.nativeEvent.layout;
 
     setWidth(width);
     setHeight(height);
@@ -183,7 +169,7 @@ export default function MeetingPage({navigation, route}) {
 
       await MeetingVariable.mediaService.sendMediaStream(micStream);
     } catch (e) {
-      toast.show(e, {type: 'danger', duration: 1300, placement: 'top'});
+      toast.show(e, { type: 'danger', duration: 1300, placement: 'top' });
     }
   };
 
@@ -199,7 +185,7 @@ export default function MeetingPage({navigation, route}) {
       setMyMicrophoneStream(null);
       setMicroStat('off');
     } catch (e) {
-      toast.show(e, {type: 'danger', duration: 1300, placement: 'top'});
+      toast.show(e, { type: 'danger', duration: 1300, placement: 'top' });
     }
   };
 
@@ -218,7 +204,7 @@ export default function MeetingPage({navigation, route}) {
         await openEnvCamera();
       }
     } catch (e) {
-      toast.show(e, {type: 'danger', duration: 1300, placement: 'top'});
+      toast.show(e, { type: 'danger', duration: 1300, placement: 'top' });
     }
   };
 
@@ -268,7 +254,7 @@ export default function MeetingPage({navigation, route}) {
       setMyCameraStream(null);
       setCamStat('off');
     } catch (e) {
-      toast.show(e, {type: 'danger', duration: 1300, placement: 'top'});
+      toast.show(e, { type: 'danger', duration: 1300, placement: 'top' });
     }
   };
 
@@ -303,7 +289,7 @@ export default function MeetingPage({navigation, route}) {
 
       await MeetingVariable.mediaService.sendMediaStream(screenStream);
     } catch (e) {
-      toast.show(e, {type: 'danger', duration: 1300, placement: 'top'});
+      toast.show(e, { type: 'danger', duration: 1300, placement: 'top' });
     }
   };
 
@@ -317,7 +303,7 @@ export default function MeetingPage({navigation, route}) {
       setMyDisplayStream(null);
       setShareScreen(false);
     } catch (e) {
-      toast.show(e, {type: 'danger', duration: 1300, placement: 'top'});
+      toast.show(e, { type: 'danger', duration: 1300, placement: 'top' });
     }
   };
 
@@ -334,11 +320,12 @@ export default function MeetingPage({navigation, route}) {
   };
 
   const openChatRoom = () => {
-    navigation.navigate('MeetingChat');
+    // minimizeCall();
+    // navigation.navigate('CHAT', { chatId });
   };
 
   const openDocuments = () => {
-    navigation.navigate('MeetingDocument');
+    // navigation.navigate('MeetingDocument');
   };
 
   const onSwipeLeft = () => {
@@ -410,6 +397,8 @@ export default function MeetingPage({navigation, route}) {
         MeetingVariable.mediaService.deleteMeetingEndListener('meetingEnd');
         MeetingVariable.mediaService.deleteBeMutedListener('muted');
 
+        await axiosInstance.put(`/api/chats/${chatId}`, { ongoingCall: undefined })
+
         if (leaveAndClose) {
           console.log('CLOSE FOR EVERY ONE');
           await MeetingVariable.mediaService.closeRoom();
@@ -419,19 +408,18 @@ export default function MeetingPage({navigation, route}) {
       }
 
       clearMeetingVariable();
-      CallKeepImpl.endIncomingcallAnswer();
-      navigation.navigate('TAB');
+      globalPageRef.current.hide();
     } catch (e) {
-      toast.show(e, {type: 'danger', duration: 1300, placement: 'top'});
+      toast.show(e, { type: 'danger', duration: 1300, placement: 'top' });
       MeetingVariable.messages = [];
       CallKeepImpl.endIncomingcallAnswer();
-      navigation.navigate('TAB');
+      // navigation.navigate('TAB');
     }
   };
 
   return (
     <View
-      style={{flex: 1, backgroundColor: '#111111', flexDirection: 'column'}}>
+      style={{ flex: 1, backgroundColor: '#111111', flexDirection: 'column' }}>
       <MyAlert
         title={
           alertError
@@ -449,7 +437,7 @@ export default function MeetingPage({navigation, route}) {
               borderWidth: 1,
               borderRadius: 5,
             }}
-            fontStyle={{fontSize: 14, color: 'green'}}
+            fontStyle={{ fontSize: 14, color: 'green' }}
           />
         }
         content={alertError ? error : null}
@@ -466,7 +454,7 @@ export default function MeetingPage({navigation, route}) {
                 backgroundColor: 'green',
                 borderRadius: 5,
               }}
-              fontStyle={{fontSize: 14, color: 'white'}}
+              fontStyle={{ fontSize: 14, color: 'white' }}
             />
           )
         }
@@ -484,7 +472,7 @@ export default function MeetingPage({navigation, route}) {
             <Text>Quitter et mettre fin à la réunion</Text>
             <CheckBox
               value={leaveAndClose}
-              tintColors={{true: 'green'}}
+              tintColors={{ true: 'green' }}
               onValueChange={value => {
                 setLeaveAndClose(value);
               }}
@@ -494,19 +482,19 @@ export default function MeetingPage({navigation, route}) {
         backEvent={
           alertError
             ? async () => {
-                await exit();
-              }
+              await exit();
+            }
             : () => {
-                setModalVisible(false);
-              }
+              setModalVisible(false);
+            }
         }
       />
 
       <Animated.View
-        style={[screenStyle.header, {top: barHeight, width: width}]}>
+        style={[screenStyle.header, { top: barHeight, width: width }]}>
         <Header roomInf={chatName} exit={backAction} />
       </Animated.View>
-      <View style={{flex: 1}} onLayout={getMainContainerScale}>
+      <View style={{ flex: 1 }} onLayout={getMainContainerScale}>
         {showSubtitle && (
           <Subtitle maxHeight={height / 2} maxWidth={width * 0.7} />
         )}
@@ -518,7 +506,7 @@ export default function MeetingPage({navigation, route}) {
             velocityThreshold: 0.3,
             directionalOffsetThreshold: 80,
           }}
-          style={{flex: 1, zIndex: 10}}>
+          style={{ flex: 1, zIndex: 10 }}>
           {view === 'grid' ? (
             <GridView
               myStream={shareScreen ? myDisplayStream : myCameraStream}
@@ -548,7 +536,7 @@ export default function MeetingPage({navigation, route}) {
         </GestureRecognizer>
       </View>
       <Animated.View
-        style={[screenStyle.footer, {bottom: barHeight, width: width}]}>
+        style={[screenStyle.footer, { bottom: barHeight, width: width }]}>
         <Footer
           startRecord={startRecord}
           stopRecord={stopRecord}

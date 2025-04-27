@@ -85,7 +85,7 @@ const FR = {
   NEW_HERE: 'Nouveau ici ?',
   SIGN_UP: 'S\'inscrire',
   WELCOME_BACK: 'Content de te revoir!',
-  WE_ARE_HAPPY_TO_SEE: 'Nous sommes heureux de voir. Vous pouvez vous connecter pour continuer',
+  WE_ARE_HAPPY_TO_SEE: 'Nous sommes heureux de vous revoir. Vous pouvez vous connecter pour continuer',
   EMAIL: 'E-mail',
   SAVE_NEW_PASSWORD: 'Nouveau mot de passe',
   PLS_REGISTER_NEW_PASSWORD: 'Veuillez entrer votre nouveau mot de passe',

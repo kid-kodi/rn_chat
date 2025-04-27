@@ -23,6 +23,10 @@ buildscript {
         if(project['name'] == 'react-native-switch-audio-output'){
             project.configurations { compile { } }
         }
+        
+        if(project['name'] == 'react-native-incoming-call'){
+            project.configurations { compile { } }
+        }
 
         afterEvaluate{
             if((subproject.plugins.hasPlugin('android') || subproject.plugins.hasPlugin('android-library'))) {

@@ -2,11 +2,8 @@ import { FlatList, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import axiosInstance from '../core/networks/AxiosInstance';
 import Loading from '../core/components/Loading';
-import Icon from 'react-native-vector-icons/Feather';
 
 import ContactItem from './ContactItem';
-import { TouchableOpacity } from 'react-native';
-import Colors from '../core/constants/Colors';
 
 
 
@@ -46,48 +43,26 @@ export default function ContactList({ navigation }) {
       <ContactItem
         item={item}
         onPress={() => { }}
+        navigation={navigation}
       />
     );
   };
 
 
   return (
-    <React.Fragment>
-      <View style={styles.list}>
-        <FlatList
-
-          data={users}
-          renderItem={renderItem}
-          keyExtractor={item => item._id}
-        />
-      </View>
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => {
-          navigation.navigate("NEWCONTACT");
-        }}>
-        <Icon name="user-plus" color={'#fff'} size={25} />
-      </TouchableOpacity>
-    </React.Fragment>
+    <SafeAreaView style={styles.container}>
+      <FlatList
+        style={{ paddingVertical: 0, paddingHorizontal: 20 }}
+        data={users}
+        renderItem={renderItem}
+        keyExtractor={item => item._id}
+      />
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff'
-  },
-  list : {
-    paddingHorizontal: 16,
-  },
-  fab: {
-    width: 60,
-    height: 60,
-    borderRadius: 50,
-    position: 'absolute',
-    bottom: 10,
-    right: 10,
-    backgroundColor: Colors.blue,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  }
 })

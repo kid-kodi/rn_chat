@@ -1,198 +1,157 @@
-import {
-  View,
-  Text,
-  KeyboardAvoidingView,
-  TouchableWithoutFeedback,
-  Keyboard,
-  StyleSheet,
-  TextInput,
-  ActivityIndicator,
-  FlatList,
-} from 'react-native';
-import React, {useEffect} from 'react';
-import Screen from '../core/components/Screen';
-import Header from '../core/components/Header';
-import {moderateScale} from '../assets/styles/responsiveSize';
-import Strings from '../core/constants/Strings';
-import Colors from '../assets/styles/Colors';
-import {useState} from 'react';
-import DataItem from '../core/components/DataItem';
-import Icon from 'react-native-vector-icons/Feather';
-import CommonStyles from '../assets/styles/CommonStyles';
-import {useChat} from '../core/contexts/ChatProvider';
-import {useUser} from '../core/contexts/UserProvider';
-import {useSocket} from '../core/contexts/SocketProvider';
+import { FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { useNavigation } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import axiosInstance from '../core/networks/AxiosInstance';
+import CustomImageView from '../core/components/CustomImage';
+import { BASE_API_URL } from '@env';
+import { useUser } from '../core/contexts/UserProvider';
+import { useSocket } from '../core/contexts/SocketProvider';
+import { useChat } from '../core/contexts/ChatProvider';
 
-export default function NewChat({route, navigation}) {
+export default function NewChat() {
+  const navigation = useNavigation();
+  const [search, setSearch] = useState('');
+  const [filteredUsers, setFilteredUsers] = useState();
+
   const socket = useSocket();
-  const {create} = useChat();
-  const {searchUsers, user} = useUser();
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [users, setUsers] = useState();
-  const [noResultsFound, setNoResultsFound] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const { create } = useChat();
+  const { user } = useUser();
 
   useEffect(() => {
-    const delaySearch = setTimeout(async () => {
-      if (!searchTerm || searchTerm === '') {
-        setUsers();
-        setNoResultsFound(false);
-        return;
+    const fetchUsers = async () => {
+      const response = await axiosInstance.get(`/api/users/search?search=${search}`);
+      if (response.success) {
+        setFilteredUsers(response.data);
       }
+    };
+    fetchUsers();
+  }, [search]);
 
-      setIsLoading(true);
-
-      const response = await searchUsers({search: searchTerm});
-      if (response.success && response.data.length > 0) {
-        setUsers(response.data);
-        setNoResultsFound(false);
-      } else if (response.success && response.data.length == 0) {
-        setUsers({});
-        setNoResultsFound(true);
-      }
-
-      setIsLoading(false);
-    }, 500);
-
-    return () => clearTimeout(delaySearch);
-  }, [searchTerm]);
 
   const userPressed = async _user => {
-    const chatUsers = [_user._id, user._id];
-    const response = await create(chatUsers, '', false);
-    if (response.success) {
-      socket.emit('new_chat', {room: response.data, userId: _user._id});
-      navigation.navigate('CHAT', {
-        chatId: response.data._id,
-      });
-    }
+    navigation.navigate('CHAT', {
+      userId: _user._id,
+    });
   };
+  // const userPressed = async _user => {
+  //   const chatUsers = [_user._id, user._id];
+  //   const response = await create(chatUsers, '', false);
+  //   if (response.success) {
+  //     socket.emit('new_chat', { room: response.data, userId: _user._id });
+  //     navigation.navigate('CHAT', {
+  //       chatId: response.data._id,
+  //     });
+  //   }
+  // };
+
+  const renderUser = ({ item }) => (
+    <TouchableOpacity
+      style={styles.userItem}
+      onPress={() => userPressed(item)}
+    >
+      <CustomImageView
+        source={`${BASE_API_URL}/image/${item.profilePicture}`}
+        firstName={item?.fullName}
+        size={40}
+        fontSize={20}
+      />
+      <Text style={styles.userName} numberOfLines={1}>{item.fullName}</Text>
+    </TouchableOpacity>
+  );
 
   return (
-    <Screen>
-      <Header leftText="Nouvelle Conversation" />
-      <KeyboardAvoidingView
-        style={{flex: 1, margin: moderateScale(16)}}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={{flex: 1}}>
-            <View style={styles.searchContainer}>
-              <Icon name="search" size={15} color={Colors.lightGrey} />
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Nouvelle Conversation</Text>
+      </View>
 
-              <TextInput
-                placeholder={'Rechercher'}
-                style={styles.searchBox}
-                onChangeText={text => setSearchTerm(text)}
-              />
-            </View>
+      {/* Search Input */}
+      <TextInput
+        placeholder="Rechercher un utilisateur"
+        value={search}
+        onChangeText={setSearch}
+        style={styles.searchInput}
+      />
 
-            {isLoading && (
-              <View style={CommonStyles.center}>
-                <ActivityIndicator size={'large'} color={Colors.primary} />
-              </View>
-            )}
+      {/* New Group Conversation */}
+      <TouchableOpacity
+        style={styles.groupButton}
+        onPress={() => navigation.navigate('NEW_GROUP_PARTICIPANTS')}
+      >
+        <Icon name="people-outline" size={20} color="#000" style={{ marginRight: 10 }} />
+        <Text style={styles.groupText}>Nouvelle conversation de groupe</Text>
+      </TouchableOpacity>
 
-            {searchTerm === '' && (
-              <View>
-                <DataItem
-                  icon="people"
-                  title="New Group"
-                  onPress={() => navigation.navigate('NEW_GROUP')}
-                />
-                {/* <DataItem icon="person-add" title="New Contact" onPress={() => userPressed(item)}/> */}
-              </View>
-            )}
-
-            {!isLoading && !noResultsFound && users && (
-              <FlatList
-                data={users}
-                renderItem={({item}) => {
-                  return (
-                    <DataItem
-                      title={item.fullName}
-                      subTitle={item.about}
-                      image={item.profilePicture}
-                      onPress={() => userPressed(item)}
-                    />
-                  );
-                }}
-              />
-            )}
-
-            {!isLoading && noResultsFound && (
-              <View style={CommonStyles.center}>
-                <Icon
-                  name="cloud-off"
-                  size={55}
-                  color={Colors.lightGrey}
-                  style={styles.noResultsIcon}
-                />
-                <Text style={styles.noResultsText}>
-                  Aucun utilisateur trouvé!
-                </Text>
-              </View>
-            )}
-          </View>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
-    </Screen>
-  );
+      {/* User List */}
+      <FlatList
+        data={filteredUsers}
+        keyExtractor={item => item._id}
+        renderItem={renderUser}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>Aucun utilisateur trouvé</Text>
+        }
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
-  searchContainer: {
+  container: { flex: 1, backgroundColor: '#fff', padding: 16 },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.blackOpacity10,
-    height: 32,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 10,
+    marginBottom: 16,
   },
-  searchBox: {
-    marginLeft: 8,
-    fontSize: 15,
-    width: '100%',
-    height: 50,
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
-  noResultsIcon: {
-    marginBottom: 20,
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 16,
   },
-  noResultsText: {
-    color: Colors.textColor,
-    fontFamily: 'regular',
-    letterSpacing: 0.3,
-  },
-  chatNameContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 5,
-  },
-  inputContainer: {
-    width: '100%',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: Colors.nearlyWhite,
+  groupButton: {
     flexDirection: 'row',
-    borderRadius: 5,
+    alignItems: 'center',
+    backgroundColor: '#eee',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
   },
-  textbox: {
-    color: Colors.textColor,
-    width: '100%',
-    fontFamily: 'regular',
-    letterSpacing: 0.3,
+  groupText: {
+    fontSize: 16,
   },
-  selectedUsersContainer: {
-    paddingHorizontal: 20,
-    height: 50,
-    justifyContent: 'center',
+  userItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomColor: '#eee',
+    borderBottomWidth: 1,
+    gap: 12,
   },
-  selectedUsersList: {
-    height: '100%',
-    paddingTop: 10,
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
   },
-  selectedUserStyle: {
-    marginRight: 10,
-    marginBottom: 10,
+  userName: {
+    fontSize: 16,
   },
-});
+  emptyText: {
+    textAlign: 'center',
+    color: '#888',
+    marginTop: 20,
+  },
+})

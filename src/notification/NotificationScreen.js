@@ -12,6 +12,10 @@ import {
 } from 'react-native';
 import { requestNotifications } from 'react-native-permissions';
 
+import Icon from "react-native-vector-icons/Ionicons";
+import Colors from '../core/constants/Colors';
+import CustomImageView from '../core/components/CustomImage';
+
 // Initial Permissions Request Screen
 const NotificationPermissionScreen = ({ onPermissionGranted }) => {
     const requestPermission = async () => {
@@ -192,10 +196,7 @@ const NotificationBanner = ({ notification, onPress, onDismiss }) => {
             activeOpacity={0.9}
         >
             <View style={styles.bannerContent}>
-                <Image
-                    source={{ uri: '/api/placeholder/40/40' }}
-                    style={styles.avatar}
-                />
+                <Icon name="chevron-forward" size={20} color="#999" />
                 <View style={styles.messageContainer}>
                     <Text style={styles.senderName}>{notification.sender}</Text>
                     <Text style={styles.messagePreview} numberOfLines={1}>
@@ -211,46 +212,41 @@ const NotificationBanner = ({ notification, onPress, onDismiss }) => {
 };
 
 // No Notifications State Component
-const NoNotificationsScreen = () => {
+const NoNotificationsScreen = (props) => {
     return (
-        <View style={styles.emptyContainer}>
-            <Image
-                source={{ uri: '/api/placeholder/100/100' }}
-                style={styles.emptyIcon}
-            />
-            <Text style={styles.emptyTitle}>No Notifications Yet</Text>
-            <Text style={styles.emptyDescription}>
-                When you receive notifications, they'll appear here
-            </Text>
+        <View style={styles.container}>
+            <View style={styles.headerContainer}>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                    <TouchableOpacity onPress={() => props.navigation.goBack()}>
+                        <Icon name={'arrow-back'} size={24} color={Colors.textColor} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Notifications</Text>
+                </View>
+            </View>
+
+            <View style={styles.emptyContainer}>
+
+                <Icon name={'notifications-outline'} size={50} color={Colors.textColor} />
+                <Text style={styles.emptyTitle}>No Notifications Yet</Text>
+                <Text style={styles.emptyDescription}>
+                    When you receive notifications, they'll appear here
+                </Text>
+            </View>
         </View>
     );
 };
 
+// {
+//     id: '1',
+//     sender: 'John Doe',
+//     message: 'Hey, are you available for a meeting tomorrow?',
+//     time: '5m ago',
+//     read: false,
+// },
+
 // Notification Center Screen
-const NotificationCenterScreen = () => {
-    const [notifications, setNotifications] = useState([
-        {
-            id: '1',
-            sender: 'John Doe',
-            message: 'Hey, are you available for a meeting tomorrow?',
-            time: '5m ago',
-            read: false,
-        },
-        {
-            id: '2',
-            sender: 'Team Chat',
-            message: "Jane: I've uploaded the new designs for review",
-            time: '10m ago',
-            read: true,
-        },
-        {
-            id: '3',
-            sender: 'Sarah Wilson',
-            message: 'Can you send me the latest project files?',
-            time: '25m ago',
-            read: true,
-        },
-    ]);
+const NotificationScreens = (props) => {
+    const [notifications, setNotifications] = useState([]);
 
     const clearAllNotifications = () => {
         setNotifications([]);
@@ -267,13 +263,18 @@ const NotificationCenterScreen = () => {
     };
 
     if (notifications.length === 0) {
-        return <NoNotificationsScreen />;
+        return <NoNotificationsScreen navigation={props.navigation} />;
     }
 
     return (
         <View style={styles.container}>
             <View style={styles.headerContainer}>
-                <Text style={styles.headerTitle}>Notifications</Text>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                    <TouchableOpacity onPress={() => props.navigation.goBack()}>
+                        <Icon name={'arrow-back'} size={24} color={Colors.textColor} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Notifications</Text>
+                </View>
                 <TouchableOpacity onPress={clearAllNotifications}>
                     <Text style={styles.clearAllText}>Clear All</Text>
                 </TouchableOpacity>
@@ -289,9 +290,11 @@ const NotificationCenterScreen = () => {
                         ]}
                         onPress={() => markAsRead(notification.id)}
                     >
-                        <Image
-                            source={{ uri: '/api/placeholder/50/50' }}
-                            style={styles.notificationAvatar}
+                        <CustomImageView
+                            source={notification.avatar}
+                            firstName={notification.sender}
+                            size={50}
+                            fontSize={25}
                         />
                         <View style={styles.notificationContent}>
                             <Text style={styles.notificationSender}>{notification.sender}</Text>
@@ -312,93 +315,93 @@ const NotificationCenterScreen = () => {
 };
 
 // Main Component that combines all notification screens
-const NotificationScreens = () => {
-    const [permissionGranted, setPermissionGranted] = useState(false);
-    const [activeScreen, setActiveScreen] = useState('permission');
-    const [showBanner, setShowBanner] = useState(false);
-    const [currentBanner, setCurrentBanner] = useState(null);
+// const NotificationScreens = () => {
+//     const [permissionGranted, setPermissionGranted] = useState(false);
+//     const [activeScreen, setActiveScreen] = useState('permission');
+//     const [showBanner, setShowBanner] = useState(false);
+//     const [currentBanner, setCurrentBanner] = useState(null);
 
-    useEffect(() => {
-        // Simulate receiving a notification after 3 seconds
-        const timer = setTimeout(() => {
-            if (permissionGranted) {
-                const newNotification = {
-                    id: Date.now().toString(),
-                    sender: 'Mike Johnson',
-                    message: 'Just sent you the files you requested',
-                };
-                setCurrentBanner(newNotification);
-                setShowBanner(true);
-            }
-        }, 3000);
+//     useEffect(() => {
+//         // Simulate receiving a notification after 3 seconds
+//         const timer = setTimeout(() => {
+//             if (permissionGranted) {
+//                 const newNotification = {
+//                     id: Date.now().toString(),
+//                     sender: 'Mike Johnson',
+//                     message: 'Just sent you the files you requested',
+//                 };
+//                 setCurrentBanner(newNotification);
+//                 setShowBanner(true);
+//             }
+//         }, 3000);
 
-        return () => clearTimeout(timer);
-    }, [permissionGranted]);
+//         return () => clearTimeout(timer);
+//     }, [permissionGranted]);
 
-    const handlePermissionGranted = () => {
-        setPermissionGranted(true);
-        setActiveScreen('settings');
-    };
+//     const handlePermissionGranted = () => {
+//         setPermissionGranted(true);
+//         setActiveScreen('settings');
+//     };
 
-    const navigateTo = (screen) => {
-        setActiveScreen(screen);
-    };
+//     const navigateTo = (screen) => {
+//         setActiveScreen(screen);
+//     };
 
-    const dismissBanner = () => {
-        setShowBanner(false);
-    };
+//     const dismissBanner = () => {
+//         setShowBanner(false);
+//     };
 
-    const renderScreen = () => {
-        switch (activeScreen) {
-            case 'permission':
-                return <NotificationPermissionScreen onPermissionGranted={handlePermissionGranted} />;
-            case 'settings':
-                return <NotificationSettingsScreen />;
-            case 'center':
-                return <NotificationCenterScreen />;
-            default:
-                return <NotificationPermissionScreen onPermissionGranted={handlePermissionGranted} />;
-        }
-    };
+//     const renderScreen = () => {
+//         switch (activeScreen) {
+//             case 'permission':
+//                 return <NotificationPermissionScreen onPermissionGranted={handlePermissionGranted} />;
+//             case 'settings':
+//                 return <NotificationSettingsScreen />;
+//             case 'center':
+//                 return <NotificationCenterScreen />;
+//             default:
+//                 return <NotificationPermissionScreen onPermissionGranted={handlePermissionGranted} />;
+//         }
+//     };
 
-    return (
-        <View style={styles.mainContainer}>
-            {renderScreen()}
+//     return (
+//         <View style={styles.mainContainer}>
+//             {renderScreen()}
 
-            {/* Bottom Navigation */}
-            <View style={styles.tabBar}>
-                <TouchableOpacity
-                    style={styles.tabItem}
-                    onPress={() => navigateTo('settings')}
-                >
-                    <Text style={activeScreen === 'settings' ? styles.activeTabText : styles.tabText}>
-                        Settings
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={styles.tabItem}
-                    onPress={() => navigateTo('center')}
-                >
-                    <Text style={activeScreen === 'center' ? styles.activeTabText : styles.tabText}>
-                        Notifications
-                    </Text>
-                </TouchableOpacity>
-            </View>
+//             {/* Bottom Navigation */}
+//             <View style={styles.tabBar}>
+//                 <TouchableOpacity
+//                     style={styles.tabItem}
+//                     onPress={() => navigateTo('settings')}
+//                 >
+//                     <Text style={activeScreen === 'settings' ? styles.activeTabText : styles.tabText}>
+//                         Settings
+//                     </Text>
+//                 </TouchableOpacity>
+//                 <TouchableOpacity
+//                     style={styles.tabItem}
+//                     onPress={() => navigateTo('center')}
+//                 >
+//                     <Text style={activeScreen === 'center' ? styles.activeTabText : styles.tabText}>
+//                         Notifications
+//                     </Text>
+//                 </TouchableOpacity>
+//             </View>
 
-            {/* Notification Banner */}
-            {showBanner && currentBanner && (
-                <NotificationBanner
-                    notification={currentBanner}
-                    onPress={() => {
-                        dismissBanner();
-                        navigateTo('center');
-                    }}
-                    onDismiss={dismissBanner}
-                />
-            )}
-        </View>
-    );
-};
+//             {/* Notification Banner */}
+//             {showBanner && currentBanner && (
+//                 <NotificationBanner
+//                     notification={currentBanner}
+//                     onPress={() => {
+//                         dismissBanner();
+//                         navigateTo('center');
+//                     }}
+//                     onDismiss={dismissBanner}
+//                 />
+//             )}
+//         </View>
+//     );
+// };
 
 const styles = StyleSheet.create({
     mainContainer: {
@@ -576,6 +579,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 16,
+        height: 50,
     },
     headerTitle: {
         fontSize: 22,
