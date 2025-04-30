@@ -18,7 +18,7 @@ import Strings from './src/core/constants/Strings';
 import messaging from '@react-native-firebase/messaging';
 import { RequestUserPermission } from './src/core/helpers/NotificationService';
 
-import { Platform, AppState, PermissionsAndroid, View, Dimensions, StyleSheet } from 'react-native';
+import { Platform, AppState, PermissionsAndroid, View, Dimensions, StyleSheet, Alert } from 'react-native';
 import PushNotification from 'react-native-push-notification';
 import PushNotificationIOS from '@react-native-community/push-notification-ios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,6 +30,7 @@ import {
   saveFCMToken,
   requestNotificationPermissions,
   onTokenRefresh,
+  handleIncomingCall,
 } from './NotificationService';
 import MainNavigator from './src/core/navigations/MainNavigator';
 
@@ -40,13 +41,88 @@ const requestNotificationPermission = async () => {
     );
   }
 };
-// Create a Context to share the GlobalPage ref across components
 
 import { navigationRef } from './src/core/helpers/RootNavigation';
-import GlobalPage from './src/core/components/GlobalPage';
-import Button from './src/core/components/Button';
+// import RNCallKeep from 'react-native-callkeep';
 
-export const GlobalPageContext = createContext(null);
+// // Initialize CallKeep
+// const setupCallKeep = () => {
+//   try {
+//     const options = {
+//       ios: {
+//         appName: 'MyCallApp',
+//         supportsVideo: false,
+//         maximumCallGroups: '1',
+//         maximumCallsPerCallGroup: '1',
+//       },
+//       android: {
+//         alertTitle: 'Permissions required',
+//         alertDescription: 'This application needs to access your phone accounts',
+//         cancelButton: 'Cancel',
+//         okButton: 'OK',
+//         additionalPermissions: [],
+//         // Required to get audio in background when using Android 11+
+//         foregroundService: {
+//           channelId: 'com.myapp.foreground',
+//           channelName: 'Foreground service for my app',
+//           notificationTitle: 'My app is running in background',
+//           notificationIcon: 'ic_launcher',
+//         },
+//       },
+//     };
+
+//     RNCallKeep.setup(options);
+//     RNCallKeep.setAvailable(true); // Android only
+
+//     // Add event listeners
+//     RNCallKeep.addEventListener('answerCall', onAnswerCall);
+//     RNCallKeep.addEventListener('endCall', onEndCall);
+//     RNCallKeep.addEventListener('didDisplayIncomingCall', onIncomingCallDisplayed);
+//     RNCallKeep.addEventListener('didPerformSetMutedCallAction', onMuteCall);
+
+//     if (Platform.OS === 'android') {
+//       // Ask for runtime permissions
+//       PermissionsAndroid.requestMultiple([
+//         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+//         PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
+//       ]);
+//     }
+//   } catch (error) {
+//     console.error('initializeCallKeep error:', error);
+//   }
+// };
+
+// // Handle incoming call from push notification
+// const displayIncomingCall = (callUUID, callerName, handle) => {
+//   RNCallKeep.displayIncomingCall(
+//     callUUID,
+//     callerName,
+//     handle,
+//     'generic',
+//     true
+//   );
+// };
+
+// // Event handlers
+// const onAnswerCall = ({ callUUID }) => {
+//   console.log('Call answered:', callUUID);
+//   // Start your call connection here (e.g., WebRTC, VoIP)
+// };
+
+// const onEndCall = ({ callUUID }) => {
+//   console.log('Call ended:', callUUID);
+//   RNCallKeep.endCall(callUUID);
+//   // Clean up your call resources here
+// };
+
+// const onIncomingCallDisplayed = () => {
+//   console.log('Incoming call displayed');
+// };
+
+// const onMuteCall = ({ muted, callUUID }) => {
+//   console.log(`Call ${callUUID} muted: ${muted}`);
+//   // Handle mute logic for your call
+// };
 
 export default function App() {
   const appState = useRef(AppState.currentState);
@@ -63,6 +139,29 @@ export default function App() {
 
   // Configure notifications on app start
   useEffect(() => {
+    // const initializeCallKeep = async () => {
+    //   try {
+    //     // Request necessary permissions first (important for Android)
+    //     if (Platform.OS === 'android') {
+    //       const hasPermissions = await CallKeepManager.checkAndRequestPermissions();
+    //       if (!hasPermissions) {
+    //         Alert.alert('Permission Denied', 'Call features will not work without required permissions');
+    //         return;
+    //       }
+    //     }
+        
+    //     // Setup CallKeep
+    //     await CallKeepManager.setup();
+        
+    //     // Register event listeners specific to your UI
+    //     // setupEventListeners();
+    //   } catch (error) {
+    //     console.error('Failed to initialize CallKeep:', error);
+    //   }
+    // };
+
+    // initializeCallKeep();
+    // setupEventListeners();
     // Set up app initialization
     setupApp();
 
@@ -72,8 +171,27 @@ export default function App() {
     // Clean up on unmount
     return () => {
       appStateSubscription.remove();
+      // removeEventListeners();
     };
   }, []);
+
+    // Setup custom event listeners to update UI state
+    const setupEventListeners = () => {
+      // We'll define our own event emitter in a real app
+      // Here we're just simulating with direct function calls
+      
+      // Example of how you might hook these up in a real app:
+      // EventEmitter.addListener('callConnected', handleCallConnected);
+      // EventEmitter.addListener('callEnded', handleCallEnded);
+      // etc.
+    };
+  
+    const removeEventListeners = () => {
+      // EventEmitter.removeAllListeners('callConnected');
+      // EventEmitter.removeAllListeners('callEnded');
+      // etc.
+    };
+
 
   // Main setup function
   const setupApp = async () => {
@@ -215,36 +333,40 @@ export default function App() {
     updateBadgeCount();
   };
 
-  // Handle incoming calls
-  const handleIncomingCall = (callData) => {
-    // console.log(callData)
-    // chatId,
-    // callerId,
-    // recipientId,
-    // callId,
-    // callType
-    const { chatId, caller_id, caller_name, call_id, video } = callData;
+  // // Handle incoming calls
+  // const handleIncomingCall = (callData) => {
+  //   // console.log(callData)
+  //   // chatId,
+  //   // callerId,
+  //   // recipientId,
+  //   // callId,
+  //   // callType
+  //   const { chatId, caller_id, caller_name, call_id, video } = callData;
 
-    // Parse and transform the call data to match your IncomingCall expectations
-    const formattedCallData = {
-      chatId,
-      callId: call_id,
-      callType: video === 'true' ? 'video' : 'audio',
-      caller: {
-        id: caller_id,
-        name: caller_name,
-        profilePicture: callData.caller_avatar || null
-      }
-    };
+  //   // Parse and transform the call data to match your IncomingCall expectations
+  //   const formattedCallData = {
+  //     chatId,
+  //     callId: call_id,
+  //     callType: video === 'true' ? 'video' : 'audio',
+  //     caller: {
+  //       id: caller_id,
+  //       name: caller_name,
+  //       profilePicture: callData.caller_avatar || null
+  //     }
+  //   };
 
-    // Navigate to call screen
-    if (navigationRef.current) {
-      navigationRef.current.navigate('INCOMING_CALL', {
-        callData: formattedCallData,
-        isIncoming: true
-      });
-    }
-  };
+  //   console.log("incoming call")
+
+  //   // displayIncomingCall(call_id, caller_name, caller_id);
+
+  //   // Navigate to call screen
+  //   if (navigationRef.current) {
+  //     navigationRef.current.navigate('INCOMING_CALL', {
+  //       callData: formattedCallData,
+  //       isIncoming: true
+  //     });
+  //   }
+  // };
 
   // Handle notifications when clicked
   const handleNotification = (notification) => {
@@ -320,24 +442,11 @@ export default function App() {
     }
   };
 
-  const globalPageRef = useRef(null);
-
-  // Initialize the global page when app loads
-  useEffect(() => {
-    if (globalPageRef.current) {
-      globalPageRef.current.init({
-        visible: false,
-        maximized: true,
-      });
-    }
-  }, []);
-
   return (
-    <GlobalPageContext.Provider value={{ globalPageRef }}>
-      <ToastProvider>
-        <ApiProvider>
-          <SocketProvider>
-            <UserProvider>
+    <ToastProvider>
+      <ApiProvider>
+        <SocketProvider>
+          <UserProvider>
               <ChatProvider>
                 <SafeAreaProvider>
                   <MenuProvider>
@@ -349,38 +458,9 @@ export default function App() {
                   </MenuProvider>
                 </SafeAreaProvider>
               </ChatProvider>
-            </UserProvider>
-          </SocketProvider>
-        </ApiProvider>
-      </ToastProvider>
-
-      {/* The global page component, accessible from any screen */}
-      {/* The global page component, accessible from any screen */}
-      <GlobalPage
-        ref={globalPageRef}
-        title="Global Information"
-        fullHeight={Dimensions.get('window').height * 0.95}
-        style={styles.globalPage}
-        videoBubbleContent={<View/>} // Default content for video bubble
-      />
-    </GlobalPageContext.Provider>
+          </UserProvider>
+        </SocketProvider>
+      </ApiProvider>
+    </ToastProvider>
   );
 }
-
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  globalPage: {
-    // Additional styling for global page
-  },
-  globalContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

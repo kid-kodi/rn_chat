@@ -97,23 +97,23 @@ const IncomingCall = ({
         }
       );
 
-      globalPageRef.current.init({
-        visible: true,
-        maximized: true,
-        videoBubble: false,
-        content:
-          <MeetingPage
-            chatId={callData.chatId}
-            user={user}
-            cameraStatus={callData.callType === "video"}
-            microphoneStatus={true} />
-      });
-
-      // navigation.navigate('CALL', {
-      //   chatId: callData.chatId,
-      //   cameraStatus: callData.callType === "video",
-      //   microphoneStatus: false,
+      // globalPageRef.current.init({
+      //   visible: true,
+      //   maximized: true,
+      //   videoBubble: false,
+      //   content:
+      //     <MeetingPage
+      //       chatId={callData.chatId}
+      //       user={user}
+      //       cameraStatus={callData.callType === "video"}
+      //       microphoneStatus={true} />
       // });
+
+      navigation.navigate('CALL', {
+        chatId: callData.chatId,
+        cameraStatus: callData.callType === "video",
+        microphoneStatus: false,
+      });
 
       // setCallState('connected');
       // startCallTimer();

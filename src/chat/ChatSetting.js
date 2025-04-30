@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { BASE_API_URL } from '@env';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Screen from '../core/components/Screen';
 import Header from '../core/components/Header';
 import ProfileImage from '../core/components/ProfileImage';
@@ -20,13 +20,23 @@ import { useChat } from '../core/contexts/ChatProvider';
 import DataItem from '../core/components/DataItem';
 import Colors from '../core/constants/Colors';
 import { useUser } from '../core/contexts/UserProvider';
+import axiosInstance from '../core/networks/AxiosInstance';
 
 const chatSettingsSchema = Yup.object().shape({
   chatName: Yup.string().required('Champs requis !'),
 });
 
 export default function ChatSetting(props) {
-  const chat = props.route.params?.chat;
+  const id = props.route.params?.id;
+
+  const [chat, setChat] = useState();
+
+  useEffect(() => {
+    (async () => {
+      const response = await axiosInstance.get(`/api/chats/${id}`);
+      setChat(response.chat)
+    })()
+  }, [id]);
 
   const { user } = useUser();
   const { updateChatData } = useChat();
@@ -85,7 +95,7 @@ export default function ChatSetting(props) {
         />
 
         <View style={styles.sectionContainer}>
-          <Text style={styles.heading}>{chat.users.length} Participants</Text>
+          <Text style={styles.heading}>{chat?.users?.length} Participants</Text>
 
           <DataItem
             title="Add users"
@@ -101,7 +111,7 @@ export default function ChatSetting(props) {
           
           
 
-          {chat.users.slice(0, defaultNumber).map(u => {
+          {chat?.users?.slice(0, defaultNumber).map(u => {
             return (
               <DataItem
                 key={u._id}
@@ -117,7 +127,7 @@ export default function ChatSetting(props) {
             );
           })}
 
-          {chat.users.length > defaultNumber && (
+          {chat?.users?.length > defaultNumber && (
             <View>
               <DataItem
                 type="link"
@@ -143,7 +153,7 @@ export default function ChatSetting(props) {
       </ScrollView>
 
       {chat &&
-        chat.isGroupChat &&
+        chat?.isGroupChat &&
         (isLoading ? (
           <ActivityIndicator size={'small'} color={Colors.primary} />
         ) : (

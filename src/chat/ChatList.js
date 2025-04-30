@@ -6,7 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Icon from 'react-native-vector-icons/Feather';
 
 import DataItem from '../core/components/DataItem';
@@ -15,18 +15,11 @@ import CommonStyles from '../core/constants/CommonStyles';
 import { useSocket } from '../core/contexts/SocketProvider';
 import { useApi } from '../core/contexts/ApiProvider';
 import { useUser } from '../core/contexts/UserProvider';
-// import {useIsFocused} from '@react-navigation/native';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
-import {
-  TimeAgo,
-  formatChatDate,
-  formatToDate,
-  formatToTime,
-} from '../core/helpers/Utility';
+import { useFocusEffect } from '@react-navigation/native';
+import { formatChatDate } from '../core/helpers/Utility';
 
 export default function ChatList({ route, navigation }) {
   const chatId = route?.params?.chatId;
-
 
   const { user } = useUser();
   const api = useApi();
@@ -61,7 +54,6 @@ export default function ChatList({ route, navigation }) {
   }
 
   function joinCall(data) {
-    console.log(data);
     navigation.navigate('CALL', {
       chatId: data.ongoingCall.chatId,
       cameraStatus: data.ongoingCall.cameraStatus,
@@ -220,7 +212,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   newGroupText: {
-    color: Colors.blue,
+    color: Colors.primaryGreen,
     fontSize: 17,
     marginBottom: 5,
   },
@@ -231,7 +223,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 10,
     right: 10,
-    backgroundColor: Colors.blue,
+    backgroundColor: Colors.primaryGreen,
     justifyContent: 'center',
     alignItems: 'center',
   },

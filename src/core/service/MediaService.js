@@ -180,7 +180,7 @@ export class MediaService {
   ) {
     if (this.joined) {
       console.warn('[Warning]  Vous avez déjà rejoint une réunion');
-      return;
+      return Promise.reject('Vous avez déjà rejoint une réunion');
     }
 
     if (!reenter) {

@@ -14,13 +14,15 @@ import { clearMeetingVariable } from '../core/service/MeetingService';
 import { MyAlert } from '../core/components/MyAlert';
 import { TextButton } from '../core/components/MyButton';
 import CheckBox from '@react-native-community/checkbox';
-import CallKeepImpl from '../core/utils/CallKeepImpl';
 import axiosInstance from '../core/networks/AxiosInstance';
-import { GlobalPageContext } from '../../App';
+import { goBack } from '../core/helpers/RootNavigation';
+import { useUser } from '../core/contexts/UserProvider';
 
-export default function MeetingPage({ cameraStatus, microphoneStatus, chatId, user }) {
+export default function MeetingPage({ navigation, route }) {
 
-  const { globalPageRef } = useContext(GlobalPageContext);
+  const { cameraStatus, microphoneStatus, chatId } = route.params;
+
+  const {user} = useUser();
 
   const [barHeight, setBarHeight] = useState(new Animated.Value(0));
   const [width, setWidth] = useState(300);
@@ -73,6 +75,7 @@ export default function MeetingPage({ cameraStatus, microphoneStatus, chatId, us
       setChatName(_chatName);
       setView(chat?.isGroupChat ? "grid" : "portrait");
 
+
       MeetingVariable.mediaService.registerPeerUpdateListener(
         'peer',
         updatePeerDetails,
@@ -95,6 +98,7 @@ export default function MeetingPage({ cameraStatus, microphoneStatus, chatId, us
           currentChat?.current._id,
           user,
         );
+
         await MeetingVariable.mediaStreamFactory.waitForUpdate();
 
         if (camStat === 'on') {
@@ -321,7 +325,7 @@ export default function MeetingPage({ cameraStatus, microphoneStatus, chatId, us
 
   const openChatRoom = () => {
     // minimizeCall();
-    // navigation.navigate('CHAT', { chatId });
+    navigation.navigate('CHAT', { chatId });
   };
 
   const openDocuments = () => {
@@ -397,7 +401,9 @@ export default function MeetingPage({ cameraStatus, microphoneStatus, chatId, us
         MeetingVariable.mediaService.deleteMeetingEndListener('meetingEnd');
         MeetingVariable.mediaService.deleteBeMutedListener('muted');
 
-        await axiosInstance.put(`/api/chats/${chatId}`, { ongoingCall: undefined })
+        // await axiosInstance.put(`/api/chats/${chatId}`, {
+        //   ongoingCall: null
+        // })
 
         if (leaveAndClose) {
           console.log('CLOSE FOR EVERY ONE');
@@ -408,12 +414,12 @@ export default function MeetingPage({ cameraStatus, microphoneStatus, chatId, us
       }
 
       clearMeetingVariable();
-      globalPageRef.current.hide();
+      goBack();
     } catch (e) {
       toast.show(e, { type: 'danger', duration: 1300, placement: 'top' });
       MeetingVariable.messages = [];
-      CallKeepImpl.endIncomingcallAnswer();
-      // navigation.navigate('TAB');
+      // CallKeepImpl.endIncomingcallAnswer();
+      goBack();
     }
   };
 

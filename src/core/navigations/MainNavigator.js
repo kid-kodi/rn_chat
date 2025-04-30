@@ -13,7 +13,7 @@ import Register from '../../auth/Register';
 import EditProfileScreen from '../../profile/EditProfileScreen';
 import ProfileScreen from '../../profile/ProfileScreen';
 import NotificationScreens from '../../notification/NotificationScreen';
-import TabScreen from '../TabScreen';
+
 import Chat from '../../chat/Chat';
 import IncomingCall from '../../call/IncomingCall';
 import MeetingPage from '../../call/MeetingPage';
@@ -28,6 +28,8 @@ import { useChat } from '../contexts/ChatProvider';
 import { navigate } from '../helpers/RootNavigation';
 import MediaGallery from '../../mediaGallery/MediaGallery';
 import GalleryViewer from '../../mediaGallery/GalleryViewer';
+import TabScreen from '../TabScreen';
+// import TabScreen from '../../tester/TabScreen';
 
 // Main app component with navigation
 const Stack = createStackNavigator();

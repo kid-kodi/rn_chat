@@ -1,6 +1,6 @@
 // services/messaging-service.js - Service to handle Firebase Cloud Messaging
 
-import { Platform } from 'react-native';
+import { DeviceEventEmitter, Platform } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import PushNotification from 'react-native-push-notification';
@@ -8,11 +8,12 @@ import PushNotificationIOS from '@react-native-community/push-notification-ios';
 import IncomingCall from 'react-native-incoming-call';
 import DeviceInfo from 'react-native-device-info';
 import axiosInstance from './src/core/networks/AxiosInstance';
+import { navigate } from './src/core/helpers/RootNavigation';
 
 // Function to handle background messages - this is the headless task that gets registered
 export async function onBackgroundMessage(remoteMessage) {
   console.log('Message handled in the background:', remoteMessage);
-  
+
   try {
     // Handle the message based on its type
     const { data, notification } = remoteMessage;
@@ -30,7 +31,7 @@ export async function onBackgroundMessage(remoteMessage) {
       // We just need to update our internal state
       await incrementBadgeCount();
     }
-    
+
     return Promise.resolve();
   } catch (error) {
     console.error('Error in background message handler:', error);
@@ -44,16 +45,16 @@ const saveBackgroundMessageData = async (message) => {
     // Get existing messages array or create new one
     const storedMessages = await AsyncStorage.getItem('backgroundMessages');
     const messages = storedMessages ? JSON.parse(storedMessages) : [];
-    
+
     // Add new message with timestamp
     messages.push({
       ...message,
       receivedAt: new Date().toISOString()
     });
-    
+
     // Keep only last 20 messages to avoid storage issues
     const recentMessages = messages.slice(-20);
-    
+
     // Save back to AsyncStorage
     await AsyncStorage.setItem('backgroundMessages', JSON.stringify(recentMessages));
   } catch (error) {
@@ -62,29 +63,58 @@ const saveBackgroundMessageData = async (message) => {
 };
 
 // Handle incoming calls when app is in background
-const handleIncomingCall = async (callData) => {
+export const handleIncomingCall = async (callData) => {
   try {
-    const { caller_id, caller_name, call_id, video } = callData;
-    
+    const { chatId, caller_id, caller_name, call_id, video } = callData;
+
     // Save call data for when app opens
     await AsyncStorage.setItem('pendingCall', JSON.stringify({
       ...callData,
       timestamp: new Date().toISOString(),
     }));
-    
+
     if (Platform.OS === 'android') {
-      // For Android, use react-native-incoming-call to display call UI
+
+      // Display incoming call activity.
       IncomingCall.display(
-        call_id,
-        caller_name,
-        caller_id,
-        'generic', // Avatar placeholder
-        video === 'true' ? 'video' : 'audio'
+        caller_id, // Call UUID v4
+        caller_name, // Username
+        'https://avatars3.githubusercontent.com/u/16166195', // Avatar URL
+        'Appel Entrant', // Info text
+        20000 // Timeout for end call after 20s
       );
+      DeviceEventEmitter.addListener('endCall', payload => {
+        // End call action here
+        console.log('endCall', payload);
+      });
+      DeviceEventEmitter.addListener('answerCall', payload => {
+        // Start call action here
+        console.log('answerCall', payload);
+        navigate('CALL', {
+          call_id,
+          chatId: chatId,
+          cameraStatus: video,
+          microphoneStatus: false,
+        });
+        if (payload.isHeadless) {
+          IncomingCall.openAppFromHeadlessMode(payload.uuid);
+        } else {
+          IncomingCall.backToForeground();
+        }
+      });
+
+      // For Android, use react-native-incoming-call to display call UI
+      // IncomingCall.display(
+      //   call_id,
+      //   caller_name,
+      //   caller_id,
+      //   'generic', // Avatar placeholder
+      //   video === 'true' ? 'video' : 'audio'
+      // );
     }
     // iOS PushKit handling would normally happen through a separate mechanism
     // Not fully implementable in the headless task
-    
+
   } catch (error) {
     console.error('Error handling background call:', error);
   }
@@ -108,22 +138,22 @@ export const processPendingBackgroundActions = async () => {
     const pendingCall = await AsyncStorage.getItem('pendingCall');
     if (pendingCall) {
       const callData = JSON.parse(pendingCall);
-      
+
       // Check if call is still relevant (not too old)
       const callTime = new Date(callData.timestamp);
       const currentTime = new Date();
       const timeDifference = (currentTime - callTime) / 1000; // in seconds
-      
+
       if (timeDifference < 60) { // If call is less than 60 seconds old
         console.log('Processing pending call from background:', callData);
         // Return call data for handling in App.js
         return { type: 'call', data: callData };
       }
-      
+
       // Clear old call data
       await AsyncStorage.removeItem('pendingCall');
     }
-    
+
     // Process other pending background messages if needed
     return null;
   } catch (error) {
@@ -150,7 +180,7 @@ export const requestNotificationPermissions = async () => {
     const enabled =
       authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-    
+
     return enabled;
   } catch (error) {
     console.error('Error requesting notification permissions:', error);
@@ -211,7 +241,7 @@ export const registerDeviceForNotifications = async (userId) => {
     const deviceModel = DeviceInfo.getModel();
     const systemVersion = DeviceInfo.getSystemVersion();
     const appVersion = DeviceInfo.getVersion();
-    
+
     // Get FCM token (or create new if needed)
     let fcmToken = await AsyncStorage.getItem('fcmToken');
     if (!fcmToken) {
@@ -220,7 +250,7 @@ export const registerDeviceForNotifications = async (userId) => {
         await AsyncStorage.setItem('fcmToken', fcmToken);
       }
     }
-    
+
     // Register with your server
     const response = await axiosInstance.post('/api/notifications/register', {
       userId,
@@ -231,7 +261,7 @@ export const registerDeviceForNotifications = async (userId) => {
       systemVersion,
       appVersion,
     });
-    
+
     console.log('Device registered for notifications:', response);
     return response;
   } catch (error) {
@@ -248,9 +278,9 @@ export const saveFCMToken = async (token) => {
       console.log('User not logged in, storing token for later registration');
       return;
     }
-    
+
     const deviceId = await DeviceInfo.getUniqueId();
-    
+
     // Send token to server
     const response = await axiosInstance.post('/api/notifications/token', {
       userId,
@@ -258,7 +288,7 @@ export const saveFCMToken = async (token) => {
       token,
       platform: Platform.OS,
     });
-    
+
     console.log('FCM token saved on server:', response);
     return response;
   } catch (error) {
@@ -271,12 +301,12 @@ export const saveFCMToken = async (token) => {
 export const unregisterDevice = async () => {
   try {
     const deviceId = await DeviceInfo.getUniqueId();
-    
+
     // Unregister from server
     const response = await axiosInstance.post('/api/notifications/unregister', {
       deviceId,
     });
-    
+
     console.log('Device unregistered from notifications:', response);
     return response;
   } catch (error) {
@@ -291,12 +321,12 @@ export const configureNotifications = (onNotificationHandler) => {
     // Called when a remote or local notification is opened or received
     onNotification: function (notification) {
       console.log('NOTIFICATION:', notification);
-      
+
       // Call the handler passed from App.js
       if (onNotificationHandler && typeof onNotificationHandler === 'function') {
         onNotificationHandler(notification);
       }
-      
+
       // Required on iOS for local notifications
       if (Platform.OS === 'ios') {
         notification.finish(PushNotificationIOS.FetchResult.NoData);
@@ -330,7 +360,7 @@ export const configureNotifications = (onNotificationHandler) => {
 // Display a local notification
 export const displayLocalNotification = (title, body, data = {}) => {
   const channelId = data.type === 'call' ? 'incoming-calls' : 'chat-messages';
-  
+
   PushNotification.localNotification({
     channelId,
     title,
@@ -352,7 +382,7 @@ export const displayLocalNotification = (title, body, data = {}) => {
 // Update badge count for iOS and some Android launchers
 export const updateBadgeCount = async (manualCount = null) => {
   let count;
-  
+
   if (manualCount !== null) {
     count = manualCount;
     await AsyncStorage.setItem('unreadCount', count.toString());
@@ -367,7 +397,7 @@ export const updateBadgeCount = async (manualCount = null) => {
       count = 1;
     }
   }
-  
+
   // Set badge count
   if (Platform.OS === 'ios') {
     PushNotificationIOS.setApplicationIconBadgeNumber(count);

@@ -13,8 +13,9 @@ import {
   Alert,
   TouchableWithoutFeedback,
   Keyboard,
+  InteractionManager,
 } from 'react-native';
-import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Icon from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import backgroundImage from '../assets/images/bg.jpeg';
@@ -43,16 +44,13 @@ import { TimeAgo, formatChatDate } from '../core/helpers/Utility';
 import axiosInstance from '../core/networks/AxiosInstance';
 import CustomImageView from '../core/components/CustomImage';
 import { useChat } from '../core/contexts/ChatProvider';
-import { GlobalPageContext } from '../../App';
-import MeetingPage from '../call/MeetingPage';
 import { navigate } from '../core/helpers/RootNavigation';
-
+import { MeetingVariable } from '../MeetingVariable';
 
 export default function Chat({ navigation, route }) {
   const { chatId, userId } = route.params;
 
   const flatListRef = useRef(null);
-  const { globalPageRef } = useContext(GlobalPageContext);
 
   const api = useApi();
   const socket = useSocket();
@@ -81,11 +79,55 @@ export default function Chat({ navigation, route }) {
 
   const [isTyping, setIsTyping] = useState(false); // To track if the current user is typing
 
+
+  const [incomingCall, setIncomingCall] = useState(null);
+  // const navigation = useNavigation();
+
+  useEffect(() => {
+    
+    // Initialize CallKeep
+    MeetingVariable.callService.setup();
+    
+    // Listen for incoming calls
+    const incomingCallListener = MeetingVariable.callService.addEventListener('callStarted', (call) => {
+      // If the call is for this chat, show the incoming call UI
+      if (call.participantId === userId) {
+        setIncomingCall(call);
+      }
+    });
+    
+    // Listen for call acceptance
+    const callAcceptedListener = MeetingVariable.callService.addEventListener('callAccepted', (call) => {
+      // Navigate to the meeting screen
+      navigation.navigate('CALL', {
+        callUUID,
+        chatId: call.chatId,
+        cameraStatus: call.callType === "video",
+        microphoneStatus: false,
+      });
+      setIncomingCall(null);
+    });
+    
+    // Listen for call rejections
+    const callRejectedListener = MeetingVariable.callService.addEventListener('callRejected', () => {
+      setIncomingCall(null);
+    });
+    
+    return () => {
+      // Clean up listeners
+      incomingCallListener();
+      callAcceptedListener();
+      callRejectedListener();
+    };
+  }, [userId]);
+
   const initiateCall = async (callType) => {
     if (isCallLoading) return;
 
     try {
       setIsCallLoading(true);
+
+      // Start the outgoing call with CallKeep
 
       // Generate a unique call ID
       const callId = uuid.v4();
@@ -99,25 +141,18 @@ export default function Chat({ navigation, route }) {
       };
 
       // Call the backend API to initiate call
-      await axiosInstance.post(`/api/call/initiate-call`, callData);
+      const response = await axiosInstance.post(`/api/call/initiate-call`, callData);
+      setChat(response.chat);
+
+      const callUUID = MeetingVariable.callService.startCall(
+        callId, chatInfo.chatId, chatInfo.chatName, chatInfo.isGroupChat, callData.callType === "video");
 
       // Navigate to call screen
-      // navigation.navigate('CALL', {
-      //   chatId: callData.chatId,
-      //   cameraStatus: callData.callType === "video",
-      //   microphoneStatus: false,
-      // });
-
-      globalPageRef.current.init({
-        visible: true,
-        maximized: true,
-        videoBubble: false,
-        content: 
-          <MeetingPage 
-            chatId={callData.chatId} 
-            user={user}
-            cameraStatus={callData.callType === "video"} 
-            microphoneStatus={true}/>
+      navigation.navigate('CALL', {
+        callUUID,
+        chatId: callData.chatId,
+        cameraStatus: callData.callType === "video",
+        microphoneStatus: false,
       });
     } catch (error) {
       console.error('Failed to initiate call:', error);
@@ -423,7 +458,7 @@ export default function Chat({ navigation, route }) {
       if (!updatedMessages[date]) {
         updatedMessages[date] = [];
       }
-      updatedMessages[date].unshift(message); // Add the new message to the beginning of the array
+      updatedMessages[date].push(message); // Add the new message to the beginning of the array
       return updatedMessages;
     });
   };
@@ -600,20 +635,18 @@ export default function Chat({ navigation, route }) {
                 <Icon name="video" size={20} color="#333" />
               </TouchableOpacity>
             </>}
-            {chat && chat.ongoingCall && <TouchableOpacity style={styles.headerButton} onPress={() => {
-              joinCall({
+            {chat && chat.ongoingCall && 
+            <TouchableOpacity style={[
+              styles.headerButton, 
+              styles.joinButton]} 
+              onPress={() => { joinCall({
                 chatId: chat._id,
-                callerId: user._id,
-                callee,
                 cameraStatus: false,
                 microphoneStatus: true,
               });
             }}>
-              <Text>Rejoindre</Text>
+              <Text style={styles.joinButtonText}>Rejoindre</Text>
             </TouchableOpacity>}
-            <TouchableOpacity style={styles.headerButton}>
-              <Icon name="more-vertical" size={20} color="#333" />
-            </TouchableOpacity>
           </View>
         </View>}
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -628,13 +661,13 @@ export default function Chat({ navigation, route }) {
                 ref={flatListRef}
                   style={{ padding: 20 }}
                   data={groupedMessages}
-                  renderItem={({ item }) => (
-                    <>
+                  renderItem={({ item, index }) => (
+                    <View key={index}>
+                      {renderDate({ item: item.date })}
                       {item.messages.map(msg => (
                         <View key={msg._id}>{renderItem(msg)}</View>
                       ))}
-                      {renderDate({ item: item.date })}
-                    </>
+                    </View>
                   )}
                   keyExtractor={item => item.date}
                   onEndReached={handleLoadMore}
@@ -642,7 +675,6 @@ export default function Chat({ navigation, route }) {
                   ListFooterComponent={
                     loading && <ActivityIndicator size="large" />
                   }
-                  inverted
                 />
               </View>
             )}
@@ -745,7 +777,7 @@ export default function Chat({ navigation, route }) {
           userId && 
           <View style={styles.firstMessageContainer}>
             <View style={styles.firstMessage}>
-              <Text style={styles.firstMessageEmote}>Dit Salut! 👋 Hi there! Just reaching out to connect.</Text>
+              <Text style={styles.firstMessageEmote}>Dit Salut! 👋</Text>
               <TouchableOpacity style={styles.firstMessageButton} onPress={createFirstMessage}>
                 <Text style={styles.firstMessageText}>Envoyer</Text>
               </TouchableOpacity>
@@ -857,6 +889,22 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: 8,
     marginLeft: 8,
+  },
+  buttonContainer: {
+    flex: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  joinButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: 9,
+    paddingRight: 9,
+  },
+  joinButtonText : {
+    color : Colors.white
   },
   firstMessageContainer: {
     flexDirection: "column",
