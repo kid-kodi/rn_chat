@@ -29,6 +29,8 @@ import { navigate } from '../helpers/RootNavigation';
 import MediaGallery from '../../mediaGallery/MediaGallery';
 import GalleryViewer from '../../mediaGallery/GalleryViewer';
 import TabScreen from '../TabScreen';
+import ForgotPasswordScreen from '../../forgot_password/ForgotPasswordScreen';
+import OtpPasswordScreen from '../../forgot_password/OtpPasswordScreen';
 // import TabScreen from '../../tester/TabScreen';
 
 // Main app component with navigation
@@ -168,6 +170,16 @@ export default function MainNavigator() {
               options={{
                 headerShown: false,
               }}
+            />
+            <Stack.Screen
+              name="FORGOT_PASSWORD"
+              component={ForgotPasswordScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name={'OTP_PASSWORD'}
+              component={OtpPasswordScreen}
+              options={{ headerShown: false, }}
             />
           </Stack.Group>
           <Stack.Group

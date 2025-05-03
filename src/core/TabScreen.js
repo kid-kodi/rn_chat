@@ -7,6 +7,9 @@ import ContactList from '../contacts/ContactList';
 import Navbar from './components/Navbar';
 import SettingsScreen from '../settings/SettingsScreen';
 import Colors from './constants/Colors';
+import OtpPasswordScreen from '../forgot_password/OtpPasswordScreen';
+import ForgotPassswordScreen from '../forgot_password/ForgotPasswordScreen';
+import ForgotPasswordScreen from '../forgot_password/ForgotPasswordScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -77,6 +80,7 @@ export default function TabScreen() {
             ),
           }}
         />
+      
       </Tab.Navigator>
     </>
     // <>
