@@ -42,6 +42,8 @@ import MeetingSettingScreen from './src/core/MeetingSettingScreen';
 import UserSettingScreen from './src/core/UserSettingScreen';
 import NormalSetting from './src/core/NormalSetting';
 import EditProfileScreen from './src/core/EditProfileScreen';
+import ForgotPassswordScreen from './src/onboarding/ForgotPasswordScreen';
+import OtpPasswordScreen from './src/onboarding/OtpPasswordScreen';
 
 const Stack = createStackNavigator();
 
@@ -275,6 +277,16 @@ export default function App() {
                               name="NORMAL_SETTING"
                               component={NormalSetting}
                               options={{headerShown: false}}
+                            />
+                            <Stack.Screen
+                              name="FORGOT_PASSWORD"
+                              component={ForgotPassswordScreen}
+                              options={{headerShown: false}}
+                            />
+                            <Stack.Screen
+                              name={'OTP_PASSWORD'}
+                              component={OtpPasswordScreen}
+                              options={{headerShown: false,}}
                             />
                           </Stack.Group>
                         </Stack.Navigator>

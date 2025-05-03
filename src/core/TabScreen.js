@@ -6,6 +6,7 @@ import Settings from './Settings';
 import Icon from 'react-native-vector-icons/Ionicons';
 import ContactList from '../contacts/ContactList';
 import UserScreen from './UserScreen';
+import Login from '../auth/Login';
 
 const Tab = createBottomTabNavigator();
 
@@ -29,7 +30,7 @@ export default function TabScreen() {
         />
         <Tab.Screen
           name="CONTACTS"
-          component={ContactList}
+          component={Login}
           options={{
             tabBarLabel: 'Contacts',
             tabBarIcon: ({color, size}) => (

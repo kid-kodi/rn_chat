@@ -10,14 +10,14 @@ import {
   Keyboard,
 } from 'react-native';
 import React, { useState } from 'react';
-import {useFormik} from 'formik';
+import { useFormik } from 'formik';
 import * as Yup from 'yup';
 
 import Screen from '../core/components/Screen';
 import Header from '../core/components/Header';
 import Input from '../core/components/Input';
 import Button from '../core/components/Button';
-import {useUser} from '../core/contexts/UserProvider';
+import { useUser } from '../core/contexts/UserProvider';
 import {
   moderateScale,
   moderateScaleVertical,
@@ -34,11 +34,11 @@ const LoginSchema = Yup.object().shape({
   password: Yup.string().required('Le mot de passe est requis !'),
 });
 
-export default function Login({navigation}) {
+export default function Login({ navigation }) {
 
   const [secureText, setSecureText] = useState(true)
 
-  const {login} = useUser();
+  const { login } = useUser();
 
   const formik = useFormik({
     initialValues: {
@@ -64,11 +64,11 @@ export default function Login({navigation}) {
     <Screen>
       <Header />
       <KeyboardAvoidingView
-        style={{flex: 1, margin: moderateScale(16)}}
+        style={{ flex: 1, margin: moderateScale(16) }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={{flex: 1}}>
-            <View style={{flex: 0.8}}>
+          <View style={{ flex: 1 }}>
+            <View style={{ flex: 0.8 }}>
               <TextCustom
                 style={styles.headerStyle}
                 text={Strings.WELCOME_BACK}
@@ -93,15 +93,24 @@ export default function Login({navigation}) {
                 onPressSecure={() => setSecureText(!secureText)}
               />
 
-              <Text
+              <View
                 style={{
-                  ...styles.descStyle,
+                  flex: 0.2,
+                  justifyContent: 'flex-end',
+                  marginBottom: moderateScaleVertical(16),
+                }}>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('FORGOT_PASSWORD')}>
+                  <Text
+                style={{
                   alignSelf: 'flex-end',
                   color: Colors.blueColor,
                   fontFamily: fontFamily.semiBold,
                 }}>
                 {Strings.FORGOT_PASSWORD}?
               </Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <View
               style={{
