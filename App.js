@@ -4,15 +4,15 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ToastProvider } from 'react-native-toast-notifications';
 import Toast from 'react-native-toast-notifications';
 import Orientation from 'react-native-orientation-locker';
-
+import DeviceInfo from 'react-native-device-info';
 import ApiProvider from './src/core/contexts/ApiProvider';
 import { NavigationContainer } from '@react-navigation/native';
 import UserProvider from './src/core/contexts/UserProvider';
 import ChatProvider from './src/core/contexts/ChatProvider';
-
+import { Linking } from 'react-native';
 import SocketProvider from './src/core/contexts/SocketProvider';
 import { MenuProvider } from 'react-native-popup-menu';
-
+import axios from 'axios';
 import Strings from './src/core/constants/Strings';
 
 import messaging from '@react-native-firebase/messaging';
@@ -22,6 +22,7 @@ import { Platform, AppState, PermissionsAndroid, View, Dimensions, StyleSheet, A
 import PushNotification from 'react-native-push-notification';
 import PushNotificationIOS from '@react-native-community/push-notification-ios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Config from 'react-native-config';
 
 import {
   configureNotifications,
@@ -34,6 +35,7 @@ import {
 } from './NotificationService';
 import MainNavigator from './src/core/navigations/MainNavigator';
 
+
 const requestNotificationPermission = async () => {
   if (Platform.OS === 'android' && Platform.Version >= 33) {
     await PermissionsAndroid.request(
@@ -41,6 +43,62 @@ const requestNotificationPermission = async () => {
     );
   }
 };
+
+// const BASE_API_URL = Config.BASE_API_URL;
+const BASE_API_URL = 'http://192.168.1.141:3000'; 
+console.log("BASE_API_URL", BASE_API_URL);
+
+// versionnage 
+const checkAppVersion = async () => {
+  try {
+    const { data } = await axios.get(`${BASE_API_URL}/api/version`);
+
+    // Pour test : version locale codée en dur
+    const localVersion = "1.0.0";
+
+    console.log("localVersion", localVersion);
+    console.log("data.version", data.version);
+    console.log("data.mandatory", data.mandatory);
+
+    const versionComparison = compareVersions(localVersion, data.version);
+    console.log("Résultat comparaison :", versionComparison);
+
+    if (data.mandatory && versionComparison > 0) {
+      console.log("Version de l'application est obsolète");
+      Alert.alert(
+        'Mise à jour requise',
+        'Une nouvelle version de Solisakan est disponible. Veuillez la mettre à jour pour continuer.',
+        [
+          {
+            text: 'Mettre à jour',
+            onPress: () => {
+              const url = Platform.OS === 'android'
+                ? data.download_url_android
+                : data.download_url_ios;
+              Linking.openURL(url);
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+    }
+  } catch (e) {
+    console.error("Erreur de vérification de version", e);
+  }
+};
+
+
+const compareVersions = (local, remote) => {
+  const a = local.split('.').map(Number);
+  const b = remote.split('.').map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const diff = (b[i] || 0) - (a[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+};
+
+
 
 import { navigationRef } from './src/core/helpers/RootNavigation';
 // import RNCallKeep from 'react-native-callkeep';
@@ -162,6 +220,8 @@ export default function App() {
 
     // initializeCallKeep();
     // setupEventListeners();
+    // Check for app version
+    checkAppVersion();
     // Set up app initialization
     setupApp();
 
