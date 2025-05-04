@@ -53,8 +53,11 @@ const checkAppVersion = async () => {
   try {
     const { data } = await axios.get(`${BASE_API_URL}/api/version`);
 
+    // const localVersion = "1.0.0";
+    const localVersion = DeviceInfo.getVersion();
+
     // Pour test : version locale codée en dur
-    const localVersion = "1.0.0";
+    // const localVersion = "1.0.0";
 
     console.log("localVersion", localVersion);
     console.log("data.version", data.version);
