@@ -67,22 +67,6 @@ export default class MeetingChat extends Component {
     });
     Keyboard.addListener('keyboardDidShow', this.keyboardWillShow);
     this.listRef.current.scrollToEnd();
-
-    // const userToken = await getFromStorage('user');
-
-    // try {
-    //   await MeetingVariable.mediaService.joinMeeting(
-    //     route.params.chatId,
-    //     userToken,
-    //     route.params.currentUser._id, // config_key.userId.toString(),
-    //     MeetingVariable.myName,
-    //     `${MeetingVariable.myName}'s mobile device`,
-    //     route.params.currentUser.profilePicture,
-    //   );
-    //   await MeetingVariable.mediaStreamFactory.waitForUpdate();
-    // } catch (e) {
-    //   toast.show(e, {type: 'danger', duration: 1300, placement: 'top'});
-    // }
   }
 
   componentWillUnmount() {

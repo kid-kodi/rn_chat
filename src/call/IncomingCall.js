@@ -17,9 +17,6 @@ import { BASE_API_URL } from '@env';
 import CustomImageView from '../core/components/CustomImage';
 import axiosInstance from '../core/networks/AxiosInstance';
 import Colors from '../core/constants/Colors';
-import { GlobalPageContext } from '../../App';
-import MeetingPage from './MeetingPage';
-import { useUser } from '../core/contexts/UserProvider';
 
 
 const IncomingCall = ({
@@ -29,9 +26,6 @@ const IncomingCall = ({
   // const [vibrationPattern] = useState([1000, 2000, 3000]);
   const pulseAnim = new Animated.Value(1);
   const callData = route.params.callData;
-
-  const { globalPageRef } = useContext(GlobalPageContext);
-  const { user } = useUser();
 
   // Set up animation
   useEffect(() => {

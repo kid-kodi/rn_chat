@@ -122,56 +122,61 @@ export default function Bubble(props) {
     };
 
     return (
-        <View style={wrapperStyle}>
-            <Container
-                onPress={() => onPress(type)}
-                onLongPress={() => menuRef.current.props.ctx.menuActions.openMenu(id.current)} style={{ width: '100%' }}>
-                <View style={bubbleStyle}>
+        <View>
 
-                    {/* {
-                        sender && type !== "info" &&
-                        <Text style={styles.name}>{sender.fullName}</Text>
-                    } */}
+            <View style={wrapperStyle}>
 
-                    {
-                        replyingTo &&
-                        <Bubble
-                            type="reply"
-                            text={replyingTo.message.content}
-                            sender={replyingTo.user}
-                        />
-                    }
+                <Container
+                    onPress={() => onPress(type)}
+                    onLongPress={() => menuRef.current.props.ctx.menuActions.openMenu(id.current)} style={{ width: '100%' }}>
 
-                    <Text style={textStyle}>
-                        {text}
-                    </Text>
+                    <View style={bubbleStyle}>
 
-                    {
-                        file &&
-                        <Image source={{ uri: `${BASE_API_URL}/image/${file.name}` }} style={styles.image} />
-                    }
+                        {
+                            sender._id !== user._id && type !== "info" &&
+                            <Text style={styles.name}>{sender.fullName}</Text>
+                        }
 
-                    {
-                        createdAt && messageType !== "info" &&
-                        <Text style={styles.date}>
-                            {formatToTime(createdAt)}
+                        {
+                            replyingTo &&
+                            <Bubble
+                                type="reply"
+                                text={replyingTo.message.content}
+                                sender={replyingTo.user}
+                            />
+                        }
+
+                        <Text style={textStyle}>
+                            {text}
                         </Text>
-                    }
 
-                    <Menu name={id.current} ref={menuRef}>
-                        <MenuTrigger />
+                        {
+                            file &&
+                            <Image source={{ uri: `${BASE_API_URL}/image/${file.name}` }} style={styles.image} />
+                        }
 
-                        <MenuOptions>
-                            <MenuItem text='Copy to clipboard' icon={'copy'} onSelect={() => copyToClipboard(text)} />
-                            {isUserMessage && !isLiked && <MenuItem text='Like message' icon={'thumbs-up'} onSelect={() => handleLike(messageId)} />}
-                            {isUserMessage && isLiked && <MenuItem text='Unlke message' icon={'thumbs-down'} onSelect={() => handleUnLike(messageId)} />}
-                            <MenuItem text='Reply' icon={'corner-up-left'} onSelect={setReply} />
-                            {user._id === sender._id && <MenuItem text='Delete' icon={'trash'} onSelect={() => handleRemoveMessage(messageId)} />}
-                        </MenuOptions>
-                    </Menu>
-                </View>
-            </Container>
-            {isUserMessage && isLiked && <Icon name={'thumbs-up'} size={18} />}
+                        {
+                            createdAt && messageType !== "info" &&
+                            <Text style={styles.date}>
+                                {formatToTime(createdAt)}
+                            </Text>
+                        }
+
+                        <Menu name={id.current} ref={menuRef}>
+                            <MenuTrigger />
+
+                            <MenuOptions>
+                                <MenuItem text='Copy to clipboard' icon={'copy'} onSelect={() => copyToClipboard(text)} />
+                                {isUserMessage && !isLiked && <MenuItem text='Like message' icon={'thumbs-up'} onSelect={() => handleLike(messageId)} />}
+                                {isUserMessage && isLiked && <MenuItem text='Unlke message' icon={'thumbs-down'} onSelect={() => handleUnLike(messageId)} />}
+                                <MenuItem text='Reply' icon={'corner-up-left'} onSelect={setReply} />
+                                {user._id === sender._id && <MenuItem text='Delete' icon={'trash'} onSelect={() => handleRemoveMessage(messageId)} />}
+                            </MenuOptions>
+                        </Menu>
+                    </View>
+                </Container>
+                {isUserMessage && isLiked && <Icon name={'thumbs-up'} size={18} />}
+            </View>
         </View>
     )
 }
@@ -186,11 +191,13 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         borderRadius: 15,
         padding: 10,
-        marginBottom: 10
+        marginBottom: 10,
     },
     text: {
         fontFamily: fontFamily.regular,
-        letterSpacing: 0.3
+        letterSpacing: 0.3,
+        fontSize: 16,
+        color : Colors.textColor
     },
     date: {
         fontSize: 10,
@@ -207,8 +214,10 @@ const styles = StyleSheet.create({
         fontSize: 16
     },
     name: {
-        fontFamily: fontFamily.semiBold,
-        letterSpacing: 0.3
+        fontWeight:"bold",
+        color:Colors.grey,
+        letterSpacing: 0.3,
+        fontSize: 12
     },
     image: {
         width: 200,

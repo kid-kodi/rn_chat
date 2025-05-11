@@ -708,7 +708,7 @@ export default function Chat({ navigation, route }) {
 
         {chat && <View style={styles.inputContainer}>
           <TouchableOpacity style={styles.mediaButton} onPress={pickImage}>
-            <Icon name="plus" size={24} color={Colors.blue} />
+            <Icon name="plus" size={24} color={Colors.grey} />
           </TouchableOpacity>
 
           <TextInput
@@ -729,7 +729,7 @@ export default function Chat({ navigation, route }) {
 
           {!isSending && messageText === '' && (
             <TouchableOpacity style={styles.mediaButton} onPress={takePhoto}>
-              <Icon name="camera" size={24} color={Colors.blue} />
+              <Icon name="camera" size={24} color={Colors.grey} />
             </TouchableOpacity>
           )}
 

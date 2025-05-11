@@ -18,11 +18,14 @@ import axiosInstance from '../core/networks/AxiosInstance';
 import { goBack } from '../core/helpers/RootNavigation';
 import { useUser } from '../core/contexts/UserProvider';
 
+import { useKeepAwake } from '@sayem314/react-native-keep-awake';
+
 export default function MeetingPage({ navigation, route }) {
+  useKeepAwake();
 
   const { cameraStatus, microphoneStatus, chatId } = route.params;
 
-  const {user} = useUser();
+  const { user } = useUser();
 
   const [barHeight, setBarHeight] = useState(new Animated.Value(0));
   const [width, setWidth] = useState(300);

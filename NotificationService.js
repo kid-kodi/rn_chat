@@ -7,8 +7,8 @@ import PushNotification from 'react-native-push-notification';
 import PushNotificationIOS from '@react-native-community/push-notification-ios';
 import IncomingCall from 'react-native-incoming-call';
 import DeviceInfo from 'react-native-device-info';
-import axiosInstance from './src/core/networks/AxiosInstance';
 import { navigate } from './src/core/helpers/RootNavigation';
+import axiosInstance from './src/core/networks/AxiosInstance';
 
 // Function to handle background messages - this is the headless task that gets registered
 export async function onBackgroundMessage(remoteMessage) {

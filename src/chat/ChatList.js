@@ -29,7 +29,6 @@ export default function ChatList({ route, navigation }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const [unReadMessages, setUnreadMessages] = useState([]);
-  const [users, setUsers] = useState([]);
 
   const chatPressed = async chatId => {
     navigation.navigate('CHAT', {
