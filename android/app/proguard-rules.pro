@@ -12,3 +12,7 @@
 
 -keep class com.rt2zz.reactnativecontacts.** {*;}
 -keepclassmembers class com.rt2zz.reactnativecontacts.** {*;}
+
+
+-keep class com.google.android.exoplayer2.** { *; }
+-keep class androidx.media3.** { *; }

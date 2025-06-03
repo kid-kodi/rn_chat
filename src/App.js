@@ -1,58 +1,48 @@
 import 'react-native-gesture-handler';
-import React, { createContext, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ToastProvider } from 'react-native-toast-notifications';
 import Toast from 'react-native-toast-notifications';
 import Orientation from 'react-native-orientation-locker';
-
-import ApiProvider from './core/contexts/ApiProvider';
 import { NavigationContainer } from '@react-navigation/native';
-import UserProvider from './core/contexts/UserProvider';
-import ChatProvider from './core/contexts/ChatProvider';
 
-import SocketProvider from './core/contexts/SocketProvider';
+import ApiProvider from './contexts/ApiProvider';
+import UserProvider from './contexts/UserProvider';
+import ChatProvider from './contexts/ChatProvider';
+
+import SocketProvider from './contexts/SocketProvider';
 import { MenuProvider } from 'react-native-popup-menu';
 
-import Strings from './core/constants/Strings';
+import Strings from './constants/Strings';
 
 import messaging from '@react-native-firebase/messaging';
-import { RequestUserPermission } from './core/helpers/NotificationService';
-
-import { Platform, AppState, PermissionsAndroid, View, Dimensions, StyleSheet, Alert } from 'react-native';
-import PushNotification from 'react-native-push-notification';
-import PushNotificationIOS from '@react-native-community/push-notification-ios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import {
-  configureNotifications,
+  RequestUserPermission, configureNotifications,
   processPendingBackgroundActions,
   getFCMToken,
   saveFCMToken,
   requestNotificationPermissions,
   onTokenRefresh,
   handleIncomingCall,
-} from '../NotificationService';
-import MainNavigator from './core/navigations/MainNavigator';
+} from './services/NotificationService';
+import { Platform, AppState } from 'react-native';
+import PushNotification from 'react-native-push-notification';
+import PushNotificationIOS from '@react-native-community/push-notification-ios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import MainNavigator from './navigations/MainNavigator';
+import { navigationRef } from './utils/RootNavigation';
+import UpdateChecker from './components/UpdateChecker';
+import { SignalingProvider } from './contexts/SignalingProvider';
 
-const requestNotificationPermission = async () => {
-  if (Platform.OS === 'android' && Platform.Version >= 33) {
-    await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
-    );
-  }
-};
-
-import { navigationRef } from './core/helpers/RootNavigation';
-import UpdateChecker from './core/components/UpdateChecker';
 
 export default function App() {
   const appState = useRef(AppState.currentState);
   Orientation.lockToPortrait();
 
   useEffect(() => {
-    RequestUserPermission();
+    // RequestUserPermission();
     // Call this before creating the channel.
-    requestNotificationPermission();
+    // requestNotificationPermission();
     Strings.setLanguage('FR');
 
 
@@ -60,29 +50,6 @@ export default function App() {
 
   // Configure notifications on app start
   useEffect(() => {
-    // const initializeCallKeep = async () => {
-    //   try {
-    //     // Request necessary permissions first (important for Android)
-    //     if (Platform.OS === 'android') {
-    //       const hasPermissions = await CallKeepManager.checkAndRequestPermissions();
-    //       if (!hasPermissions) {
-    //         Alert.alert('Permission Denied', 'Call features will not work without required permissions');
-    //         return;
-    //       }
-    //     }
-
-    //     // Setup CallKeep
-    //     await CallKeepManager.setup();
-
-    //     // Register event listeners specific to your UI
-    //     // setupEventListeners();
-    //   } catch (error) {
-    //     console.error('Failed to initialize CallKeep:', error);
-    //   }
-    // };
-
-    // initializeCallKeep();
-    // setupEventListeners();
     // Set up app initialization
     setupApp();
 
@@ -315,20 +282,22 @@ export default function App() {
     <ToastProvider>
       <ApiProvider>
         <SocketProvider>
-          <UserProvider>
-            <ChatProvider>
-              <SafeAreaProvider>
-                <MenuProvider>
-                  <NavigationContainer
-                    ref={navigationRef}>
-                    <MainNavigator />
-                  </NavigationContainer>
-                  <UpdateChecker />
-                  <Toast ref={ref => (global['toast'] = ref)} />
-                </MenuProvider>
-              </SafeAreaProvider>
-            </ChatProvider>
-          </UserProvider>
+          {/* <SignalingProvider> */}
+            <UserProvider>
+              <ChatProvider>
+                <SafeAreaProvider>
+                  <MenuProvider>
+                    <NavigationContainer
+                      ref={navigationRef}>
+                      <MainNavigator />
+                    </NavigationContainer>
+                    <UpdateChecker />
+                    <Toast ref={ref => (global['toast'] = ref)} />
+                  </MenuProvider>
+                </SafeAreaProvider>
+              </ChatProvider>
+            </UserProvider>
+          {/* </SignalingProvider> */}
         </SocketProvider>
       </ApiProvider>
     </ToastProvider>

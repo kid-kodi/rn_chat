@@ -15,6 +15,14 @@ export async function RequestUserPermission() {
   }
 }
 
+export const requestNotificationPermission = async () => {
+  if (Platform.OS === 'android' && Platform.Version >= 33) {
+    await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+    );
+  }
+};
+
 const getFcmToken = async () => {
   let fcmToken = await AsyncStorage.getItem('fcmToken');
   if (!fcmToken) {

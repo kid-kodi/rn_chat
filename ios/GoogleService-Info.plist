@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>org.reactjs.native.example.ky92</string>
+	<string>com.solisakane.--PRODUCT-NAME-rfc1034identifier-</string>
 	<key>PROJECT_ID</key>
 	<string>call-a6abd</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:87596107949:ios:a8b3ad3c86d1e4059c9e24</string>
+	<string>1:87596107949:ios:6e5616d40c6aecec9c9e24</string>
 </dict>
 </plist>

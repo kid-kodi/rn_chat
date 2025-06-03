@@ -16,13 +16,13 @@ import {
   socketConnectionOptions,
   TransportType,
 } from '../../ServiceConfig';
-import {SignalingService} from './SignalingService';
-import {PeerMedia} from '../../core/helpers/media/PeerMedia';
-import {timeoutCallback} from '../../core/helpers/media/MediaUtils';
+import { SignalingService } from './SignalingService';
+import { PeerMedia } from '../helpers/media/PeerMedia';
+import { timeoutCallback } from '../helpers/media/MediaUtils';
 import * as events from 'events';
-import {Moment} from 'moment';
-import {MeetingVariable} from '../../MeetingVariable';
-import * as types from '../../core/helpers/Types';
+import { Moment } from 'moment';
+import { MeetingVariable } from '../../MeetingVariable';
+import * as types from '../helpers/Types';
 
 export class MediaService {
   chatId;
@@ -158,6 +158,15 @@ export class MediaService {
     });
   }
 
+  // registerUser(user) {
+  //   const URL = meetingURL(user._id);
+  //   this.signaling = new SignalingService(
+  //     URL,
+  //     socketConnectionOptions,
+  //     this.onSignalingDisconnect.bind(this),
+  //   );
+  // }
+
   joinMeeting(chatId, user) {
     // MeetingVariable?.speechRecognition?.clear();
     return this._joinMeeting(
@@ -190,7 +199,7 @@ export class MediaService {
       this.displayName = user.fullName;
       this.deviceName = user.fullName;
       // this.avatar = avatar;
-      this.avatar = avatarURL(user.profilPicture ? avatar : "defaultProfile.jpeg") ;
+      this.avatar = avatarURL(user.profilPicture ? avatar : "defaultProfile.jpeg");
       console.log('[Log]  Try to join meeting with chatId = ' + chatId);
 
       try {
@@ -224,7 +233,7 @@ export class MediaService {
       console.log('[Log]  Router RTP Capabilities received');
 
       if (!this.device.loaded) {
-        await this.device.load({routerRtpCapabilities: rtpCapabilities});
+        await this.device.load({ routerRtpCapabilities: rtpCapabilities });
       }
 
       await this.createSendTransport();
@@ -239,7 +248,7 @@ export class MediaService {
     }
 
     try {
-      const {host, peerInfos} = await this.signaling.sendRequest(
+      const { host, peerInfos } = await this.signaling.sendRequest(
         SignalMethod.join,
         {
           displayName: this.displayName,
@@ -250,22 +259,22 @@ export class MediaService {
         },
       );
 
+      console.log("####host , peerInfos")
+      console.log(host , peerInfos)
+
       this.hostPeerId = host;
 
       for (const info of peerInfos) {
         this.peerMedia.addPeerInfo(info);
       }
 
-      console.log("WE HERE")
-
       this.updatePeerCallbacks.forEach(callback => {
         callback();
       });
 
-      console.log("WE GET TO HERE")
-
       this.joined = true;
     } catch (err) {
+      console.log(err)
       console.error('[Error]  Fail to join the meeting', err);
       this.meetingEndCallbacks.forEach(callback => {
         callback(MeetingEndReason.lostConnection);
@@ -308,7 +317,7 @@ export class MediaService {
     try {
       const sendParam = await this.signaling.sendRequest(
         SignalMethod.restartIce,
-        {transportId: this.sendTransport.id},
+        { transportId: this.sendTransport.id },
       );
       await this.sendTransport.restartIce({
         iceParameters: sendParam.iceParameters,
@@ -316,7 +325,7 @@ export class MediaService {
 
       const recvParam = await this.signaling.sendRequest(
         SignalMethod.restartIce,
-        {transportId: this.recvTransport.id},
+        { transportId: this.recvTransport.id },
       );
       await this.recvTransport.restartIce({
         iceParameters: recvParam.iceParameters,
@@ -365,16 +374,16 @@ export class MediaService {
           source = `Video_from_peer_${this.myId}_track_${track.id}`;
           params = {
             track,
-            appData: {source},
+            appData: { source },
             // encodings: SIMULCASTENCODING,
-            codecOptions: {videoGoogleStartBitrate: 1000},
+            codecOptions: { videoGoogleStartBitrate: 1000 },
             // codec: this.device.rtpCapabilities.codecs.find(codec => codec.mimeType === 'video/H264')
           };
         } else {
           source = `Audio_from_peer_${this.myId}_track_${track.id}`;
           params = {
             track,
-            appData: {source},
+            appData: { source },
           };
         }
 
@@ -446,14 +455,14 @@ export class MediaService {
 
   sendSpeechText(speechText) {
     if (this.signaling && this.signaling.connected()) {
-      this.signaling.sendNotify(SignalMethod.sendSpeechText, {speechText});
+      this.signaling.sendNotify(SignalMethod.sendSpeechText, { speechText });
     }
   }
 
   // if _toPeerId == null, it means broadcast to everyone in the meetings
   async startRecord(roomId) {
     try {
-      await this.signaling.sendRequest(SignalMethod.startRecord, {roomId});
+      await this.signaling.sendRequest(SignalMethod.startRecord, { roomId });
       console.log('[Log]  record start');
     } catch (err) {
       console.error('[Error]  Fail to start record', err);
@@ -464,7 +473,7 @@ export class MediaService {
   // if _toPeerId == null, it means broadcast to everyone in the meetings
   async stopRecord(roomId) {
     try {
-      await this.signaling.sendRequest(SignalMethod.stopRecord, {roomId});
+      await this.signaling.sendRequest(SignalMethod.stopRecord, { roomId });
       console.log('[Log]  Text sent');
     } catch (err) {
       console.error('[Error]  Fail to send text', err);
@@ -571,7 +580,7 @@ export class MediaService {
       return Promise.reject('Fail to mute peer: Unauthorized');
     }
     try {
-      await this.signaling.sendRequest(SignalMethod.mute, {mutePeerId: peerId});
+      await this.signaling.sendRequest(SignalMethod.mute, { mutePeerId: peerId });
     } catch (err) {
       console.error('[Error]  Fail to mute peer peerId = ' + peerId, err);
       return Promise.reject('Fail to mute peer');
@@ -615,7 +624,7 @@ export class MediaService {
     //   return Promise.reject('Fail to close meeting: Unauthorized');
     // }
     try {
-      if(!this.signaling) return;
+      if (!this.signaling) return;
       await this.signaling.sendRequest(SignalMethod.closeRoom);
       this.signaling.removeAllListeners();
     } catch (err) {
@@ -651,7 +660,7 @@ export class MediaService {
 
     this.sendTransport.on(
       'connect',
-      async ({dtlsParameters}, done, errBack) => {
+      async ({ dtlsParameters }, done, errBack) => {
         console.log(
           '[Transport event]  event: connect, handled by sendTransport',
         );
@@ -669,13 +678,13 @@ export class MediaService {
 
     this.sendTransport.on(
       'produce',
-      async ({kind, rtpParameters, appData}, callback, errBack) => {
+      async ({ kind, rtpParameters, appData }, callback, errBack) => {
         console.log(
           '[Transport event]  event: produce, handled by sendTransport',
         );
         try {
           // producerId
-          const {producerId} = await this.signaling.sendRequest(
+          const { producerId } = await this.signaling.sendRequest(
             SignalMethod.produce,
             {
               transportId: this.sendTransport.id,
@@ -684,7 +693,7 @@ export class MediaService {
               appData,
             },
           );
-          callback({id: producerId});
+          callback({ id: producerId });
         } catch (err) {
           errBack(err);
         }
@@ -713,7 +722,7 @@ export class MediaService {
 
     this.recvTransport.on(
       'connect',
-      async ({dtlsParameters}, done, errBack) => {
+      async ({ dtlsParameters }, done, errBack) => {
         console.log(
           '[Transport event]  event: connect, handled by recvTransport',
         );
@@ -734,7 +743,7 @@ export class MediaService {
     this.signaling.registerListener(
       SignalType.notify,
       SignalMethod.allowed,
-      ({allowed}) => {
+      ({ allowed }) => {
         console.log(
           `[Signaling]  Handling allowed notification with allowed = ${allowed} ...`,
         );
@@ -798,7 +807,7 @@ export class MediaService {
     this.signaling.registerListener(
       SignalType.notify,
       SignalMethod.consumerClosed,
-      ({consumerId}) => {
+      ({ consumerId }) => {
         console.log('[Signaling]  Handling consumerClosed notification...');
         console.log(`[Signaling]  Delete consumer id = ${consumerId}`);
         this.peerMedia.deleteConsumer(consumerId);
@@ -812,7 +821,7 @@ export class MediaService {
     this.signaling.registerListener(
       SignalType.notify,
       SignalMethod.peerClosed,
-      ({peerId}) => {
+      ({ peerId }) => {
         console.log('[Signaling]  Handling peerClosed notification...');
         console.log(`[Signaling]  Delete peer id = ${peerId}`);
         this.peerMedia.deletePeer(peerId);
@@ -849,7 +858,7 @@ export class MediaService {
     this.signaling.registerListener(
       SignalType.notify,
       SignalMethod.newSpeechText,
-      ({speechText}) => {
+      ({ speechText }) => {
         console.log('[Signaling]  Handling newSpeechText notification...');
         MeetingVariable.speechRecognition.recvPeerSpeech(speechText);
       },
@@ -885,7 +894,7 @@ export class MediaService {
     this.signaling.registerListener(
       SignalType.notify,
       SignalMethod.hostChanged,
-      ({newHostId}) => {
+      ({ newHostId }) => {
         console.log(`[Signaling]  Handling hostChanged notification...`);
         console.log(
           `[Signaling]  Host of the meeting changed from ${this.hostPeerId} to ${newHostId}`,
@@ -927,7 +936,7 @@ export class MediaService {
     this.signaling.registerListener(
       SignalType.notify,
       SignalMethod.beMuted,
-      ({producerId}) => {
+      ({ producerId }) => {
         console.log('[Signaling]  Handling beMuted notification...');
 
         let trackId = null;

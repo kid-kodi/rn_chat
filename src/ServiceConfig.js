@@ -21,6 +21,10 @@ export const fileUploadURL = userToken => {
   return `${BASE_API_URL}/api/files?token=${userToken}`;
 };
 
+export const registerURL = (userId) => {
+  return `${serviceConfig.serverURL}/room?userId=${userId}`;
+};
+
 export const meetingURL = (chatId, userId) => {
   return `${serviceConfig.serverURL}/room?chatId=${chatId}&userId=${userId}`;
 };

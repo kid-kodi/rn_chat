@@ -1,15 +1,15 @@
 import DocumentPicker from 'react-native-document-picker';
 
-import {fileUploadURL, serviceConfig} from '../../ServiceConfig';
-import {config_key} from '../../Constants';
+import { fileUploadURL, serviceConfig } from '../../ServiceConfig';
+import { config_key } from '../../Constants';
 import getPath from '@flyerhq/react-native-android-uri-path';
-import {Platform} from 'react-native';
+import { Platform } from 'react-native';
 import { FileJobStatus } from '../../core/helpers/Types';
 
 const RNFS = require('react-native-fs');
 
 export class FileService {
-  constructor() {}
+  constructor() { }
 
   getDefaultDownloadPath() {
     return RNFS.DownloadDirectoryPath;
@@ -42,6 +42,55 @@ export class FileService {
     }
     console.log(`[Log]  File path converted: ${realPath}`);
     return realPath;
+  }
+
+  /**
+   * Checks if a file exists at the given path
+   * @param {string} filePath - The full path to the file
+   * @returns {Promise<boolean>} - Returns true if file exists, false otherwise
+   */
+  async fileExists(filePath) {
+    if (!filePath || typeof filePath !== 'string') {
+      console.warn('[fileExists] Invalid file path provided:', filePath);
+      return false;
+    }
+
+    try {
+      // First check if path exists
+      const pathExists = await RNFS.exists(filePath);
+      if (!pathExists) {
+        console.debug(`[fileExists] Path does not exist: ${filePath}`);
+        return false;
+      }
+
+      // Verify it's a file and not a directory
+      const stats = await RNFS.stat(filePath);
+      const isFile = stats.isFile();
+
+      console.log('[fileExists]', {
+        path: filePath,
+        exists: true,
+        isFile: isFile,
+        size: stats.size,
+        lastModified: new Date(stats.mtime).toISOString()
+      });
+
+      console.log("###isFile")
+      console.log(isFile)
+
+      return isFile;
+
+    } catch (error) {
+      console.error('[fileExists] Error checking file:', {
+        path: filePath,
+        error: {
+          message: error.message,
+          code: error.code,
+          stack: error.stack
+        }
+      });
+      return false;
+    }
   }
 
   async pickFile() {
@@ -90,14 +139,14 @@ export class FileService {
           _onUploadProgress(res.totalBytesSent, res.totalBytesExpectedToSend);
           console.log(
             '[Log]  File uploading ... ' +
-              (((res.totalBytesSent / res.totalBytesExpectedToSend) * 100) |
-                0) +
-              '%',
+            (((res.totalBytesSent / res.totalBytesExpectedToSend) * 100) |
+              0) +
+            '%',
           );
         },
       };
 
-      const {jobId, promise} = RNFS.uploadFiles(uploadFileOptions);
+      const { jobId, promise } = RNFS.uploadFiles(uploadFileOptions);
       const result = await promise;
       const response = JSON.parse(result.body);
 
@@ -119,6 +168,9 @@ export class FileService {
   }
 
   async download(fromURL, savePath, _onDownloadProgress, setFileJobStatus) {
+    console.log("#####fromURL")
+    console.log(fromURL)
+    console.log(savePath)
     try {
       const downloadOpts = {
         fromUrl: fromURL,
@@ -137,12 +189,12 @@ export class FileService {
           _onDownloadProgress(res.bytesWritten, res.contentLength);
           console.log(
             '[Log]  File downloading ... ' +
-              (((res.bytesWritten / res.contentLength) * 100) | 0) +
-              '%',
+            (((res.bytesWritten / res.contentLength) * 100) | 0) +
+            '%',
           );
         },
       };
-      const {jobId, promise} = RNFS.downloadFile(downloadOpts);
+      const { jobId, promise } = RNFS.downloadFile(downloadOpts);
       const result = await promise;
 
       if (result.statusCode == 200) {

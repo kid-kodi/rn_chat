@@ -50,7 +50,8 @@ export class SignalingService {
     this.callbackMap.get(SignalType.request).clear();
   }
 
-  waitForConnection() {
+  waitForConnection(user) {
+    this.socket.auth = user;
     this.socket.connect();
     return new Promise((resolve, reject) => {
       console.log('[Socket]  Waiting for connection to ' + this.URL + '...');

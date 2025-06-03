@@ -1,5 +1,5 @@
-import {getFromStorage} from "../helpers/Utils";
-import {postRequest} from "../helpers/Utils";
+import {getFromStorage} from "../../utils/Utils";
+import {postRequest} from "../../utils/Utils";
 import moment from "moment";
 import {config, config_key} from "../../Constants";
 import {MeetingVariable} from "../../MeetingVariable";

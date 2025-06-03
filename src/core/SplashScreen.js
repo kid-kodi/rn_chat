@@ -2,8 +2,8 @@ import {View, Text, ActivityIndicator, Alert} from 'react-native';
 import React, {useEffect} from 'react';
 import {useUser} from './contexts/UserProvider';
 import {useNavigation} from '@react-navigation/native';
-import Colors from './constants/Colors';
-import CommonStyles from './constants/CommonStyles';
+import Colors from '../constants/Colors';
+import CommonStyles from '../constants/CommonStyles';
 import {getFromStorage} from './helpers/StorageUtils';
 
 export default function SplashScreen() {
