@@ -10,6 +10,11 @@ import DeviceInfo from 'react-native-device-info';
 import { navigate } from '../utils/RootNavigation';
 import axiosInstance from '../utils/AxiosInstance';
 
+// import CallKeep from 'react-native-callkeep';
+
+import notifee, { EventType, AndroidImportance } from '@notifee/react-native';
+import { MeetingVariable } from '../MeetingVariable';
+
 // Handle navigation based on notification data
 const handleDeepLinking = (data) => {
   if (data.chatId) {
@@ -80,7 +85,7 @@ export const setupFirebaseMessaging = async () => {
 
       // Handle foreground messages
       const unsubscribeForegroundMessage = messaging().onMessage(async (remoteMessage) => {
-        console.log('Message received in foreground:', remoteMessage);
+        console.log('Message received in foreground: ##########', remoteMessage);
         handleIncomingMessage(remoteMessage);
       });
 
@@ -95,6 +100,20 @@ export const setupFirebaseMessaging = async () => {
     }
   } catch (error) {
     console.error('Error setting up Firebase messaging:', error);
+  }
+};
+
+// Handle incoming messages based on type
+const handleIncomingMessage = (message) => {
+  console.log(message)
+  const { data, notification } = message;
+  const notificationType = data?.type;
+  // Check if this is a call notification
+  if (notificationType === 'call') {
+      handleIncomingCall(data);
+  } else {
+    // Regular chat message or other notification
+    displayLocalNotification(notification?.title, notification?.body, data);
   }
 };
 
@@ -190,15 +209,10 @@ export const handleIncomingCall = async (callData) => {
           IncomingCall.backToForeground();
         }
       });
+    }
+    else {
 
-      // For Android, use react-native-incoming-call to display call UI
-      // IncomingCall.display(
-      //   call_id,
-      //   caller_name,
-      //   caller_id,
-      //   'generic', // Avatar placeholder
-      //   video === 'true' ? 'video' : 'audio'
-      // );
+      MeetingVariable.callService.displayIncomingCall(chatId, caller_name, hasVideo = false);
     }
     // iOS PushKit handling would normally happen through a separate mechanism
     // Not fully implementable in the headless task
@@ -264,6 +278,7 @@ export const getFCMToken = async () => {
 // Function to request notification permissions
 export const requestNotificationPermissions = async () => {
   try {
+    await notifee.requestPermission()
     const authStatus = await messaging().requestPermission();
     const enabled =
       authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
@@ -403,40 +418,48 @@ export const unregisterDevice = async () => {
   }
 };
 
-// Configure local notifications
 export const configureNotifications = (onNotificationHandler) => {
+  // Configure react-native-push-notification (existing code)
   PushNotification.configure({
-    // Called when a remote or local notification is opened or received
     onNotification: function (notification) {
       console.log('NOTIFICATION:', notification);
-
-      // Call the handler passed from App.js
       if (onNotificationHandler && typeof onNotificationHandler === 'function') {
         onNotificationHandler(notification);
       }
-
-      // Required on iOS for local notifications
       if (Platform.OS === 'ios') {
         notification.finish(PushNotificationIOS.FetchResult.NoData);
       }
     },
-
-    // IOS ONLY
     onRegister: function (tokenData) {
       console.log('TOKEN:', tokenData);
     },
-
-    // Should the initial notification be popped automatically
     popInitialNotification: true,
-
     requestPermissions: Platform.OS === 'ios',
-
-    // Android specific properties
     permissions: {
       alert: true,
       badge: true,
       sound: true,
     },
+  });
+
+  // Notifee foreground event handler - only handle presses
+  notifee.onForegroundEvent(({ type, detail }) => {
+    if (type === EventType.PRESS) {
+      console.log('Notification pressed:', detail.notification);
+      if (detail.notification?.data?.chatId) {
+        navigate('CHAT', { chatId: detail.notification.data.chatId });
+      }
+      if (onNotificationHandler) {
+        onNotificationHandler(detail.notification);
+      }
+    }
+  });
+
+  // Handle initial notification (app launched from notification)
+  notifee.getInitialNotification().then(notification => {
+    if (notification?.data?.chatId) {
+      navigate('CHAT', { chatId: notification.data.chatId });
+    }
   });
 
   // Create notification channels for Android
@@ -445,25 +468,28 @@ export const configureNotifications = (onNotificationHandler) => {
   }
 };
 
-// Display a local notification
-export const displayLocalNotification = (title, body, data = {}) => {
-  const channelId = data.type === 'call' ? 'incoming-calls' : 'chat-messages';
+export const displayLocalNotification = async (title, body, data = {}) => {
+  const channelId = data?.type === 'call' ? 'incoming-calls' : 'chat-messages';
 
-  PushNotification.localNotification({
-    channelId,
+  await notifee.displayNotification({
     title,
-    message: body,
-    playSound: true,
-    soundName: data.type === 'call' ? 'ringtone' : 'default',
-    userInfo: data,
-    // For Android
-    smallIcon: 'ic_notification',
-    largeIcon: '',
-    // For iOS
-    category: data.type === 'call' ? 'callinvite' : 'message',
+    body,
+    data, // Make sure to include the data for deep linking
+    android: {
+      channelId,
+      smallIcon: 'ic_launcher',
+      pressAction: {
+        id: 'default',
+        // launchActivity: 'default', // Your main activity
+      },
+      largeIcon: 'ic_launcher', // Optional: Use your app icon
+    },
+    ios: {
+      categoryId: 'message',
+      sound: 'default',
+    }
   });
 
-  // Update badge count
   updateBadgeCount();
 };
 

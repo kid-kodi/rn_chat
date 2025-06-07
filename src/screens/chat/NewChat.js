@@ -1,23 +1,16 @@
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { FlatList, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { useEffect, useState } from 'react'
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import axiosInstance from '../../utils/AxiosInstance';
 import CustomImageView from '../../components/CustomImage';
 import { BASE_API_URL } from '@env';
-import { useUser } from '../../contexts/UserProvider';
-import { useSocket } from '../../contexts/SocketProvider';
-import { useChat } from '../../contexts/ChatProvider';
 import { navigate } from '../../utils/RootNavigation';
 
 export default function NewChat() {
   const navigation = useNavigation();
   const [search, setSearch] = useState('');
   const [filteredUsers, setFilteredUsers] = useState();
-
-  const socket = useSocket();
-  const { create } = useChat();
-  const { user } = useUser();
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -33,15 +26,7 @@ export default function NewChat() {
   const userPressed = async _user => {
 
     navigate('CHAT', {
-      chatInfo: {
-        participants: [_user],
-        avatar: _user.profilePicture,
-        name: _user.fullName,
-        status: _user.status,
-        usersLenght: 1,
-        lastSeen: _user.lastSeen,
-        isGroupChat: false,
-      }
+      userId: _user._id
     });
 
   };
@@ -62,7 +47,7 @@ export default function NewChat() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -71,49 +56,56 @@ export default function NewChat() {
         <Text style={styles.headerTitle}>Nouvelle Conversation</Text>
       </View>
 
-      {/* Search Input */}
-      <TextInput
-        placeholder="Rechercher un utilisateur"
-        value={search}
-        onChangeText={setSearch}
-        style={styles.searchInput}
-      />
+      <View style={styles.main}>
 
-      {/* New Group Conversation */}
-      <TouchableOpacity
-        style={styles.groupButton}
-        onPress={() => navigation.navigate('NEW_GROUP_PARTICIPANTS')}
-      >
-        <Icon name="people-outline" size={20} color="#000" style={{ marginRight: 10 }} />
-        <Text style={styles.groupText}>Nouvelle conversation de groupe</Text>
-      </TouchableOpacity>
+        {/* Search Input */}
+        <TextInput
+          placeholder="Rechercher un utilisateur"
+          value={search}
+          onChangeText={setSearch}
+          style={styles.searchInput}
+        />
 
-      {/* User List */}
-      <FlatList
-        data={filteredUsers}
-        keyExtractor={item => item._id}
-        renderItem={renderUser}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>Aucun utilisateur trouvé</Text>
-        }
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+        {/* New Group Conversation */}
+        <TouchableOpacity
+          style={styles.groupButton}
+          onPress={() => navigation.navigate('NEW_GROUP_PARTICIPANTS')}
+        >
+          <Icon name="people-outline" size={20} color="#000" style={{ marginRight: 10 }} />
+          <Text style={styles.groupText}>Nouvelle conversation de groupe</Text>
+        </TouchableOpacity>
+
+        {/* User List */}
+        <FlatList
+          data={filteredUsers}
+          keyExtractor={item => item._id}
+          renderItem={renderUser}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>Aucun utilisateur trouvé</Text>
+          }
+
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 16 },
+  container: { flex: 1, backgroundColor: '#fff' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    paddingTop: 15,
+    paddingBottom: 15,
+    paddingHorizontal: 16
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 10,
   },
+  main: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 16 },
   searchInput: {
     borderWidth: 1,
     borderColor: '#ccc',

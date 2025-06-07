@@ -29,6 +29,7 @@ import { MeetingVariable } from '../../MeetingVariable';
 
 export default function ConversationList({ route, navigation }) {
   const chatId = route?.params?.chatId;
+  const selectedUserId = route?.params?.selectedUserId;
 
   const { user } = useUser();
   const api = useApi();
@@ -40,18 +41,7 @@ export default function ConversationList({ route, navigation }) {
   const [unReadMessages, setUnreadMessages] = useState([]);
 
   const chatPressed = async (chat) => {
-    navigate('CHAT', {
-      chatInfo: {
-        chatId: chat._id,
-        participants: chat.users,
-        avatar: chat.isGroupChat ? chat.chatImage : chat.users[0].profilePicture,
-        name: chat.isGroupChat ? chat.chatName : chat.users[0].fullName,
-        status: chat.users[0].status,
-        usersLenght: chat.users.length,
-        lastSeen: chat.users[0].lastSeen,
-        isGroupChat: chat.isGroupChat,
-      }
-    });
+    navigate('CHAT', { chatId: chat._id });
   };
 
   function updateConversationWithJoinButton(chatId, callerId, cameraStatus,
@@ -83,14 +73,14 @@ export default function ConversationList({ route, navigation }) {
       caller: user,
     };
 
-    const callUUID = MeetingVariable.callService.startCall(
-      callId, data.ongoingCall.chatId, 
-      data.isGroupChat ? data.users[0].fullName : data.chatName, 
-      data.isGroupChat, callData.callType === "video");
+    // const callUUID = MeetingVariable.callService.startCall(
+    //   callId, data.ongoingCall.chatId, 
+    //   data.isGroupChat ? data.users[0].fullName : data.chatName, 
+    //   data.isGroupChat, callData.callType === "video");
 
 
     navigation.navigate('CALL', {
-      callUUID,
+      // callUUID,
       chatId: data.ongoingCall.chatId,
       cameraStatus: data.ongoingCall.cameraStatus,
       microphoneStatus: data.ongoingCall.microphoneStatus,
@@ -146,18 +136,23 @@ export default function ConversationList({ route, navigation }) {
   }, []);
 
 
-  useFocusEffect(
-    React.useCallback(() => {
-      (async () => {
-        setIsLoading(true);
-        const response = await api.get(`/api/chats`);
-        if (response.success) {
-          setChats(response.chats);
-          setIsLoading(false);
-        }
-      })();
-    }, []),
-  );
+  useEffect(() => {
+    if (!selectedUserId) return;
+
+    navigate("CHAT", { newChat: { participants: [selectedUserId, user._id] } })
+
+  }, [route?.params])
+
+  useEffect(() => {
+    (async () => {
+      setIsLoading(true);
+      const response = await api.get(`/api/chats`);
+      if (response.success) {
+        setChats(response.chats);
+        setIsLoading(false);
+      }
+    })();
+  }, [])
 
   return (
     <SafeAreaView style={styles.container}>

@@ -10,6 +10,8 @@ import DeviceInfo from 'react-native-device-info';
 import { navigate } from '../utils/RootNavigation';
 import axiosInstance from '../utils/AxiosInstance';
 
+import notifee from '@notifee/react-native';
+
 // Handle navigation based on notification data
 const handleDeepLinking = (data) => {
   if (data.chatId) {
@@ -95,6 +97,20 @@ export const setupFirebaseMessaging = async () => {
     }
   } catch (error) {
     console.error('Error setting up Firebase messaging:', error);
+  }
+};
+
+// Handle incoming messages based on type
+const handleIncomingMessage = (message) => {
+  const { data, notification } = message;
+  const notificationType = data?.type;
+
+  // Check if this is a call notification
+  if (notificationType === 'call') {
+    handleIncomingCall(data);
+  } else {
+    // Regular chat message or other notification
+    displayLocalNotification(notification?.title, notification?.body, data);
   }
 };
 
@@ -264,6 +280,7 @@ export const getFCMToken = async () => {
 // Function to request notification permissions
 export const requestNotificationPermissions = async () => {
   try {
+    await notifee.requestPermission()
     const authStatus = await messaging().requestPermission();
     const enabled =
       authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
@@ -446,22 +463,41 @@ export const configureNotifications = (onNotificationHandler) => {
 };
 
 // Display a local notification
-export const displayLocalNotification = (title, body, data = {}) => {
+export const displayLocalNotification = async (title, body, data = {}) => {
+
   const channelId = data.type === 'call' ? 'incoming-calls' : 'chat-messages';
 
-  PushNotification.localNotification({
-    channelId,
+  // Display a notification
+  await notifee.displayNotification({
     title,
-    message: body,
-    playSound: true,
-    soundName: data.type === 'call' ? 'ringtone' : 'default',
-    userInfo: data,
-    // For Android
-    smallIcon: 'ic_notification',
-    largeIcon: '',
-    // For iOS
-    category: data.type === 'call' ? 'callinvite' : 'message',
+    body,
+    android: {
+      channelId: 'messages',
+      smallIcon: 'ic_notification',
+      pressAction: {
+        id: 'default',
+      },
+    },
+    ios: {
+      // iOS specific options
+      categoryId: 'message',
+      sound: 'default',
+    }
   });
+
+  // PushNotification.localNotification({
+  //   channelId,
+  //   title,
+  //   message: body,
+  //   playSound: true,
+  //   soundName: data.type === 'call' ? 'ringtone' : 'default',
+  //   userInfo: data,
+  //   // For Android
+  //   smallIcon: 'ic_notification',
+  //   largeIcon: '',
+  //   // For iOS
+  //   category: data.type === 'call' ? 'callinvite' : 'message',
+  // });
 
   // Update badge count
   updateBadgeCount();

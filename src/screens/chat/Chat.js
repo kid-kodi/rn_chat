@@ -26,19 +26,25 @@ import uuid from 'react-native-uuid';
 import FileViewer from 'react-native-file-viewer';
 import { FileJobStatus, FileJobType } from '../../utils/Types';
 import MessageBubble from './MessageItem';
+import RNCallKeep from 'react-native-callkeep';
+
+import ChatHeader from './ChatHeader';
+import { TypingIndicator } from '../../components/TypingIndicator';
 
 const MESSAGES_PER_PAGE = 50;
 
 export default function Chat({ route }) {
 
-  let chatInfo = route?.params?.chatInfo;
-  let userId = route?.params?.userId;
+  const userId = route?.params?.userId;
+  const chatId = route?.params?.chatId;
+
 
   const { user } = useUser();
-  const { chat, setChat } = useChat();
   const api = useApi();
   const socket = useSocket();
 
+  const [chatInfo, setChatInfo] = useState();
+  const [chat, setChat] = useState();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -66,28 +72,123 @@ export default function Chat({ route }) {
 
   const [isCallLoading, setIsCallLoading] = useState(false);
 
-  // Add these state variables
-  const [isNewChat, setIsNewChat] = useState(false);
-
-
   const recordingRef = useRef(null);
   const durationTimerRef = useRef(null);
 
   const flatListRef = useRef()
 
-  // const openFile = item => {
+  const getChatById = async (chat_id) => {
+    try {
+      const response = await api.get(
+        `/api/chats/${chat_id}`
+      );
 
-  //   const filePath = `${MeetingVariable.fileService.getBundlePath()}/${item.name}`;
+      setChat(response.chat);
+      setChatInfo({
+        isGroupChat: response?.chat?.isGroupChat,
+        avatar: response?.chat?.isGroupChat ? response?.chat?.image : response?.chat?.users[0]?.profilPicture,
+        name: response?.chat?.isGroupChat ? response?.chat?.name : response?.chat?.users[0]?.fullName,
+        participants: response?.chat?.isGroupChat ? response?.chat?.users : response?.chat?.users[0],
+        status: response?.chat?.isGroupChat ? `participants ${response?.chat?.users?.length}` : response?.chat?.users[0]?.status === "online" ? 'En ligne' : "Hors ligne"
+      })
+    } catch (error) {
 
-  //   FileViewer.open(filePath)
-  //     .then(() => {
-  //       console.log('open file success');
-  //     })
-  //     .catch((error) => {
+    }
+  }
 
-  //       console.log('open file error == ' + error);
-  //     });
-  // };
+  const checkIfChatExist = async (user_id) => {
+    try {
+
+      const response = await api.get(
+        `/api/chats/is-chat-exist/${user_id}`
+      );
+      response.isChatExist && setChat(response.chat);
+      setChatInfo({
+        isGroupChat: response?.chat?.isGroupChat,
+        avatar: response?.chat?.isGroupChat ? response?.chat?.image : response?.user?.profilPicture,
+        name: response?.chat?.isGroupChat ? response?.chat?.name : response?.user?.fullName,
+        participants: response?.chat?.isGroupChat ? response?.chat?.users : response?.user,
+        status: response?.chat?.isGroupChat ? `participants ${response?.chat?.users?.length}` : response?.users?.status === "online" ? 'En ligne' : "Hors ligne",
+      })
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  const loadMessages = async (chat_id, pageNum, isInitial = false) => {
+    if (!isInitial && !hasMore) return;
+
+    try {
+      if (isInitial) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const response = await api.get(
+        `/api/messages/${chat_id}?page=${pageNum}&limit=${MESSAGES_PER_PAGE}`
+      );
+
+      if (!response.success) throw new Error('Failed to load messages');
+
+      const data = await response.messages;
+
+      if (isInitial) {
+        setMessages(data);
+      } else {
+        setMessages(prev => [...prev, ...data]);
+      }
+
+      setHasMore(response.hasMore);
+      setPage(pageNum);
+
+    } catch (error) {
+      console.error('Load messages error:', error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleLoadMore = useCallback(() => {
+    if (!loadingMore && hasMore && chat) {
+      loadMessages(chat._id, page + 1);
+    }
+  }, [loadingMore, hasMore, page]);
+
+  useEffect(() => {
+    // if newChat get chat by selected users id
+    if (chatId) {
+      getChatById(chatId);
+      loadMessages(chatId, 1, true);
+    }
+
+    // else get chat by selected chat id
+    if (userId) {
+      checkIfChatExist(userId);
+    }
+
+  }, [route.params]);
+
+  const createFirstMessage = async () => {
+    const response = await api.post(
+      `/api/chats/create-first-message/${userId}`,
+      { users: [user._id, userId] }
+    );
+    console.log(response)
+    if (response.success) {
+      setChat(response.data);
+      setChatInfo({
+        isGroupChat: response?.data?.isGroupChat,
+        avatar: response?.data?.isGroupChat ? response?.data?.image : response?.data?.users[0]?.profilPicture,
+        name: response?.data?.isGroupChat ? response?.data?.name : response?.data?.users[0]?.fullName,
+        participants: response?.data?.isGroupChat ? response?.data?.users : response?.data?.users[0],
+        status: response?.data?.isGroupChat ? `participants ${response?.data?.users?.length}` : response?.data?.users[0]?.status === "online" ? 'En ligne' : "Hors ligne"
+      })
+    }
+    // notify user that a new converation created
+  };
+
 
   const openFile = async (item) => {
     try {
@@ -260,72 +361,6 @@ export default function Chat({ route }) {
     };
   }, [userId]);
 
-  const initiateCall = async (callType) => {
-    if (isCallLoading) return;
-
-    try {
-      setIsCallLoading(true);
-
-      // Start the outgoing call with CallKeep
-
-      // Generate a unique call ID
-      const callId = uuid.v4();
-
-      // Prepare call data
-      const callData = {
-        chatId: chatInfo.chatId,
-        callId,
-        callType,
-        caller: user,
-      };
-
-      // Call the backend API to initiate call
-      const response = await api.post(`/api/call/initiate-call`, callData);
-      setChat(response.chat);
-
-      const callUUID = MeetingVariable.callService.startCall(
-        callId, chatInfo.chatId, chatInfo.name, chatInfo.isGroupChat, callData.callType === "video");
-
-      // Navigate to call screen
-      navigate('CALL', {
-        callUUID,
-        chatId: callData.chatId,
-        cameraStatus: callData.callType === "video",
-        microphoneStatus: false,
-      });
-    } catch (error) {
-      console.error('Failed to initiate call:', error);
-      Alert.alert('Call Failed', 'Could not connect the call. Please try again later.');
-    } finally {
-      setIsCallLoading(false);
-    }
-  };
-
-
-  const joinCall = async data => {
-    // Generate a unique call ID
-    const callId = uuid.v4();
-
-    // Prepare call data
-    const callData = {
-      chatId: chatInfo.chatId,
-      callId,
-      callType : data.cameraStatus ? "video" : "audio",
-      caller: user,
-    };
-
-    const callUUID = MeetingVariable.callService.startCall(
-      callId, chatInfo.chatId, chatInfo.name, chatInfo.isGroupChat, callData.callType === "video");
-
-    navigate('CALL', {
-      callUUID,
-      chatId: data.chatId,
-      cameraStatus: data.cameraStatus,
-      microphoneStatus: data.microphoneStatus,
-    });
-    return false;
-  };
-
   // At the top of your component, memoize the handler
   const handleIncomingMessage = useCallback((data) => {
     setMessages(prev => [data, ...prev]);
@@ -333,8 +368,8 @@ export default function Chat({ route }) {
 
   // Socket effects
   useEffect(() => {
-    if (!chatInfo) return;
-    socket.emit('join_room', chatInfo.chatId);
+    if (!chat) return;
+    socket.emit('join_room', chat?._id);
 
     const messageHandler = (data) => {
       handleIncomingMessage(data);
@@ -344,9 +379,9 @@ export default function Chat({ route }) {
 
     return () => {
       socket.off('new_message', messageHandler); // Use off() with exact handler
-      socket.emit('leave_room', chatInfo?.chatId);
+      socket.emit('leave_room', chat?._id);
     };
-  }, [chatInfo?.chatId, handleIncomingMessage]); // Add dependencies
+  }, [chat?._id, handleIncomingMessage]); // Add dependencies
 
   useEffect(() => {
     socket.on('user_typing', ({ userId }) => {
@@ -361,78 +396,16 @@ export default function Chat({ route }) {
     };
   }, [user?._id, isTyping]);
 
-  // Load initial messages
-  useEffect(() => {
-
-    if (chatInfo && chatInfo.chatId) {
-      getChat();
-      loadMessages(1, true);
-    }
-    else {
-      setIsNewChat(true);
-    }
-
-  }, [chatInfo?.chatId]);
-
-  const getChat = async () => {
-    const response = await api.get(
-      `/api/chats/${chatInfo.chatId}`
-    );
-
-    setChat(response.chat);
-  }
-
-  const loadMessages = async (pageNum, isInitial = false) => {
-    if (!isInitial && !hasMore) return;
-
-    try {
-      if (isInitial) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
-
-      const response = await api.get(
-        `/api/messages/${chatInfo?.chatId}?page=${pageNum}&limit=${MESSAGES_PER_PAGE}`
-      );
-
-      if (!response.success) throw new Error('Failed to load messages');
-
-      const data = await response.messages;
-
-      if (isInitial) {
-        setMessages(data);
-      } else {
-        setMessages(prev => [...prev, ...data]);
-      }
-
-      setHasMore(response.hasMore);
-      setPage(pageNum);
-
-    } catch (error) {
-      console.error('Load messages error:', error);
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  };
-
-  const handleLoadMore = useCallback(() => {
-    if (!loadingMore && hasMore) {
-      loadMessages(page + 1);
-    }
-  }, [loadingMore, hasMore, page]);
-
   useEffect(() => {
     (async () => {
-      if (chatInfo && chatInfo.chatId) {
-        const response = await api.get(`/api/chats/${chatInfo.chatId}/medias`);
+      if (chat && chat._id) {
+        const response = await api.get(`/api/chats/${chat._id}/medias`);
         if (response.success) {
           setMediaItems(response.mediaItems);
         }
       }
     })()
-  }, [chatInfo?.chatId])
+  }, [chat?._id])
 
   const renderFooter = () => {
     if (!loadingMore) return null;
@@ -451,87 +424,6 @@ export default function Chat({ route }) {
       </View>
     );
   }
-
-  const renderChatHeader = () => (
-    <View style={styles.header}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => navigate(`TAB`)}
-      >
-        <Ionicons name="arrow-back" size={24} color="#333333" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.contactInfo}
-        onPress={() =>
-          chatInfo?.isGroupChat
-            ? navigate('CHAT_SETTINGS', { id: chatInfo?.chatId })
-            : navigate('CONTACT', { id: chatInfo?.participants[0]._id })
-        }
-      >
-        <CustomImageView
-          source={`${BASE_API_URL}/image/${chatInfo?.avatar}`}
-          firstName={chatInfo?.name}
-          size={40}
-          fontSize={20}
-        />
-        <View style={styles.contactTextInfo}>
-          <Text style={styles.contactName}>{chatInfo?.name}</Text>
-          {chatInfo?.isGroupChat && <Text style={styles.contactStatus}>
-            participants {chatInfo?.usersLenght}
-          </Text>}
-
-          {!chatInfo?.isGroupChat && chatInfo?.status && <Text style={styles.contactStatus}>
-            {chatInfo?.status === 'online' ? 'Online' : chatInfo?.lastSeen}
-          </Text>}
-        </View>
-      </TouchableOpacity>
-
-      <View style={styles.headerActions}>
-        {!chat?.ongoingCall && <>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleAudioCall}
-          >
-            <Ionicons name="call-outline" size={22} color="#333" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleVideoCall}
-          >
-            <Ionicons name="videocam-outline" size={22} color="#333" />
-          </TouchableOpacity>
-        </>}
-
-        {chat?.ongoingCall &&
-          <TouchableOpacity style={[
-            styles.headerButton,
-            styles.joinButton]}
-            onPress={() => {
-              joinCall({
-                chatId: chat?._id,
-                cameraStatus: false,
-                microphoneStatus: true,
-              });
-            }}>
-            <Text style={styles.joinButtonText}>Rejoindre</Text>
-          </TouchableOpacity>}
-      </View>
-    </View>
-  );
-
-  const handleAudioCall = () => {
-    // Implement audio call functionality
-    // Alert.alert('Audio Call', `Calling ${chatInfo.name}...`);
-    initiateCall('audio');
-  };
-
-  const handleVideoCall = () => {
-    // Implement video call functionality
-    // Alert.alert('Video Call', `Starting video call with ${chatInfo.name}...`);
-    initiateCall('video')
-  };
 
   const renderMessage = ({ item }) => {
     const isUserMessage = item.sender._id === user._id; // Current user ID
@@ -726,20 +618,20 @@ export default function Chat({ route }) {
 
   const stopTyping = () => {
     socket.emit('stop_typing', {
-      roomId: chatInfo.chatId,
+      roomId: chat?._id,
       userId: user?._id,
     });
   };
 
   const startTyping = () => {
     socket.emit('is_typing', {
-      roomId: chatInfo.chatId,
+      roomId: chat?._id,
       userId: user?._id
     });
   };
 
   const handleSendMessage = async () => {
-    if ((messageText.trim() === '' && !mediaPreview) || !chatInfo || !socket) return;
+    if ((messageText.trim() === '' && !mediaPreview) || !chat || !socket) return;
 
     try {
       let uploadedFile = null;
@@ -749,7 +641,7 @@ export default function Chat({ route }) {
       }
 
       const messageData = {
-        chat: chatInfo.chatId,
+        chat: chat._id,
         sender: user,
         content: messageText.trim(),
         type: messageType,
@@ -795,7 +687,7 @@ export default function Chat({ route }) {
       );
 
       socket.emit('send_message', {
-        chatId: chatInfo.chatId,
+        chatId: chat._id,
         senderId: user._id,
         message: response.data,
       });
@@ -1011,26 +903,26 @@ export default function Chat({ route }) {
     return null;
   };
 
-  const createFirstMessage = async () => {
-    let userId = chatInfo.participants[0]._id;
-    console.log(chatInfo);
-    const response = await api.post(
-      `/api/chats/create-first-message/${userId}`,
-      { users: [user._id, userId] }
-    );
-    if (response.success) {
-      navigate('CHATLIST', {
-        chatId: response.data._id,
-      });
-    }
-  };
-
 
   return (
     <SafeAreaView style={styles.container}>
-      {renderChatHeader()}
+      <ChatHeader chat={chat} chatInfo={chatInfo} />
       {
-        !isNewChat &&
+        !chat &&
+        <View style={styles.newChatContainer}>
+          <View style={styles.firstMessageContainer}>
+            <View style={styles.firstMessage}>
+              <Text style={styles.firstMessageEmote}>Dit Salut! 👋</Text>
+              <TouchableOpacity style={styles.firstMessageButton} onPress={createFirstMessage}>
+                <Text style={styles.firstMessageText}>Envoyer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      }
+
+      {
+        chat &&
         <>
           <FlatList
             ref={flatListRef}
@@ -1049,17 +941,16 @@ export default function Chat({ route }) {
             contentContainerStyle={styles.messagesList}
           />
 
+
           {
-            isTyping && <Text>User Type</Text>
+            isTyping && <TypingIndicator isVisible={isTyping}/>
           }
 
 
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           >
-            {/* {replyingTo && (
-          <ReplyTo message={replyingTo} onCancel={() => setReplyingTo(null)} />
-        )} */}
+
             {mediaPreview && renderMediaPreview()}
 
             <View style={styles.inputContainer}>
@@ -1129,25 +1020,9 @@ export default function Chat({ route }) {
             </View>
             {showAttachmentOptions && renderAttachmentOptions()}
           </KeyboardAvoidingView>
+
         </>
       }
-
-      {
-        isNewChat &&
-        <View style={styles.newChatContainer}>
-          <View style={styles.firstMessageContainer}>
-            <View style={styles.firstMessage}>
-              <Text style={styles.firstMessageEmote}>Dit Salut! 👋</Text>
-              <TouchableOpacity style={styles.firstMessageButton} onPress={createFirstMessage}>
-                <Text style={styles.firstMessageText}>Envoyer</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      }
-
     </SafeAreaView>
   )
 }
-
-

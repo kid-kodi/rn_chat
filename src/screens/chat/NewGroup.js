@@ -6,6 +6,7 @@ import CustomImageView from '../../components/CustomImage';
 import { BASE_API_URL } from '@env';
 import { useUser } from '../../contexts/UserProvider';
 import { useChat } from '../../contexts/ChatProvider';
+import { SafeAreaView } from 'react-native';
 
 
 
@@ -25,7 +26,8 @@ export default function NewGroup({ navigation }) {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      const response = await axiosInstance.get(`/api/users/search?search=${searchTerm}&exclude=${selectedUsers.map((p) => p._id)}`);
+      const response = await axiosInstance.get(
+        `/api/users/search?search=${searchTerm}&exclude=${selectedUsers.map((p) => p._id)}`);
       if (response.success) {
         setUsers(response.data);
       }
@@ -50,7 +52,7 @@ export default function NewGroup({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -59,91 +61,102 @@ export default function NewGroup({ navigation }) {
         <Text style={styles.headerTitle}>Nouvelle Conversation de groupe</Text>
       </View>
 
-      {/* Search Bar */}
-      <TextInput
-        placeholder="Rechercher..."
-        style={styles.searchBar}
-        value={searchTerm}
-        onChangeText={text => setSearchTerm(text)}
-      />
+      <View style={styles.main}>
+        {/* Search Bar */}
+        <TextInput
+          placeholder="Rechercher..."
+          style={styles.searchBar}
+          value={searchTerm}
+          onChangeText={text => setSearchTerm(text)}
+        />
 
-      {/* Selected Participants */}
-      <FlatList
-        horizontal
-        data={selectedUsers}
-        keyExtractor={(item) => item._id}
-        ref={ref => (selectedUsersFlatList.current = ref)}
-        style={styles.participantsList}
-        renderItem={({ item }) => (
-          <View style={styles.participantItem}>
-            <CustomImageView
-              source={`${BASE_API_URL}/image/${item.profilePicture}`}
-              firstName={item?.fullName}
-              size={40}
-              fontSize={20}
-            />
-            <Text style={styles.participantName} numberOfLines={1}>{item.fullName}</Text>
-            <TouchableOpacity onPress={() => userPressed(item)} style={styles.removeBtn}>
-              <Icon name="close-circle" size={18} color="red" />
-            </TouchableOpacity>
-          </View>
-        )}
-      />
+        {/* Selected Participants */}
+        {
+          selectedUsers.length > 0 &&
+          <FlatList
+            horizontal
+            data={selectedUsers}
+            keyExtractor={(item) => item._id}
+            ref={ref => (selectedUsersFlatList.current = ref)}
+            style={styles.participantsList}
+            renderItem={({ item }) => (
+              <View style={styles.participantItem}>
+                <CustomImageView
+                  source={`${BASE_API_URL}/image/${item.profilePicture}`}
+                  firstName={item?.fullName}
+                  size={40}
+                  fontSize={20}
+                />
+                <Text style={styles.participantName} numberOfLines={1}>{item.fullName}</Text>
+                <TouchableOpacity onPress={() => userPressed(item)} style={styles.removeBtn}>
+                  <Icon name="close-circle" size={18} color="red" />
+                </TouchableOpacity>
+              </View>
+            )}
+          />
+        }
 
-      {/* Available Users */}
-      <FlatList
-        data={users}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <>
-            <TouchableOpacity style={styles.userItem} onPress={() => userPressed(item)}>
-              <CustomImageView
-                source={`${BASE_API_URL}/image/${item.profilePicture}`}
-                firstName={item?.fullName}
-                size={40}
-                fontSize={20}
-              />
-              <Text style={styles.fullName}>{item.fullName}</Text>
-              <Icon name="person-add" size={20} color="#007AFF" />
-            </TouchableOpacity>
-          </>
-        )}
-      />
+        {/* Available Users */}
+        <FlatList
+          data={users}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <>
+              <TouchableOpacity style={styles.userItem} onPress={() => userPressed(item)}>
+                <CustomImageView
+                  source={`${BASE_API_URL}/image/${item.profilePicture}`}
+                  firstName={item?.fullName}
+                  size={40}
+                  fontSize={20}
+                />
+                <Text style={styles.fullName}>{item.fullName}</Text>
+                <Icon name="person-add" size={20} color="#007AFF" />
+              </TouchableOpacity>
+            </>
+          )}
+        />
+      </View>
+
+
 
       <View style={styles.stickyButtonContainer}>
         <TouchableOpacity style={styles.stickyButton} onPress={onNext}>
           <Text style={styles.stickyButtonText}>Suivant</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 16 },
+  container: { flex: 1, backgroundColor: '#fff' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
+    paddingHorizontal: 16
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 10,
   },
+  main: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 16 },
   searchBar: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    marginBottom: 10,
+    // marginBottom: 10,
   },
   participantsList: {
-    maxHeight: 100,
+    paddingTop:20, 
     marginBottom: 10,
+    maxHeight : 80,
   },
   participantItem: {
     alignItems: 'center',

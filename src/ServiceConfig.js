@@ -4,7 +4,7 @@ const config = {
   // serverIp:  "api.solisalim.com",
   serverIp:  SERVER_IP,
   serverPort: 5000,
-  serverUseHttps: true,
+  serverUseHttps: false,
 };
 
 export const iflytekAPPID = 'YourAPPID';
@@ -30,7 +30,7 @@ export const meetingURL = (chatId, userId) => {
 };
 
 export const avatarURL = avatar => {
-  return `${serviceConfig.serverURL}/image/${avatar}`;
+  return `${BASE_API_URL}/image/${avatar}`;
 };
 
 export const serviceConfig = {

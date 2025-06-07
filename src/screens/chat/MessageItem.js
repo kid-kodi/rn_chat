@@ -13,17 +13,31 @@ import { styles } from './chatStyles';
 import { BASE_API_URL } from '@env';
 import { navigate } from '../../utils/RootNavigation';
 import VideoMessage from './VideoMessage';
+import BlurredImage from '../../components/BlurredImage';
+import { useState } from 'react';
+
+
 
 const ImageMessage = ({ message }) => {
-
+  const [downloadedImages, setDownloadedImages] = useState({});
   return (
-    <TouchableOpacity onPress={() => navigate(`GALLERY_VIEWER`, { chatId: message.chat, file: message.file })}>
-      <Image
-        source={{ uri: `${BASE_API_URL}/image/${message?.file?.name}` }}
-        style={styles.messageImage}
-        resizeMode="cover"
-      />
-    </TouchableOpacity>
+    <BlurredImage
+      source={{ uri: `${BASE_API_URL}/image/${message?.file?.name}` }}
+      style={styles.image}
+      onLoad={() => {
+        setDownloadedImages(prev => ({
+          ...prev,
+          [message?.file?.name]: true
+        }));
+      }}
+    />
+    // <TouchableOpacity onPress={() => navigate(`GALLERY_VIEWER`, { chatId: message.chat, file: message.file })}>
+    //   <Image
+    //     source={{ uri: `${BASE_API_URL}/image/${message?.file?.name}` }}
+    //     style={styles.messageImage}
+    //     resizeMode="cover"
+    //   />
+    // </TouchableOpacity>
   );
 };
 
@@ -74,7 +88,7 @@ const MessageBubble = ({
 
       case 'video':
         return (
-          <VideoMessage message={message}/>
+          <VideoMessage message={message} />
         );
 
       case 'audio':

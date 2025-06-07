@@ -2,8 +2,9 @@
 
 import { Platform, PermissionsAndroid } from 'react-native';
 import RNCallKeep from 'react-native-callkeep';
-import uuid from 'uuid';
+import uuid from 'react-native-uuid';
 import { EventEmitter } from 'events';
+import { navigate } from '../../utils/RootNavigation';
 
 export class CallService {
   constructor() {
@@ -12,7 +13,7 @@ export class CallService {
     this.currentCallUUID = null;
     this.isCallActive = false;
     this.hasSetup = false;
-    
+
     // Bind methods
     this.setup = this.setup.bind(this);
     this.startCall = this.startCall.bind(this);
@@ -24,7 +25,7 @@ export class CallService {
 
   async setup() {
     if (this.hasSetup) return;
-    
+
     // Request necessary permissions for Android
     if (Platform.OS === 'android') {
       try {
@@ -88,7 +89,7 @@ export class CallService {
     //   console.log('Call toggled hold state', callUUID, isOnHold);
     // });
 
-    RNCallKeep.addEventListener('didDisplayIncomingCall', ({ 
+    RNCallKeep.addEventListener('didDisplayIncomingCall', ({
       callUUID, handle, hasVideo, localizedCallerName
     }) => {
       console.log('Incoming call displayed', callUUID);
@@ -107,19 +108,19 @@ export class CallService {
     // Generate a unique UUID for this call
     this.currentCallUUID = callUUID;
     this.currentCallId = chatId;
-    
+
     // Display the call UI
     RNCallKeep.startCall(callUUID, chatId, chatName, 'number', hasVideo);
-    
+
     // Notify your app about the call
-    this.callEventEmitter.emit('callStarted', { 
+    this.callEventEmitter.emit('callStarted', {
       callUUID,
       chatId,
       chatName,
       isGroupChat,
       hasVideo
     });
-    
+
     return callUUID;
   }
 
@@ -128,7 +129,7 @@ export class CallService {
     const callUUID = uuid.v4();
     this.currentCallId = chatId;
     this.currentCallUUID = callUUID;
-    
+
     RNCallKeep.displayIncomingCall(
       callUUID,
       chatId,
@@ -136,18 +137,34 @@ export class CallService {
       'number',
       hasVideo
     );
-    
+
+    // Listen for CallKit events
+    RNCallKeep.addEventListener('answerCall', ({ callUUID }) => {
+      console.log('Call answered by user');
+      navigate('CALL', {
+        callUUID,
+        chatId,
+        cameraStatus: hasVideo,
+        microphoneStatus: false,
+      });
+    });
+
+    RNCallKeep.addEventListener('endCall', ({ callUUID }) => {
+      console.log('Call ended by user');
+      this.endCall(callUUID);
+    });
+
     return callUUID;
   }
 
   // Call this from MeetingScreen when ending a call
   endCall(callUUID = this.currentCallUUID) {
     if (!callUUID) return;
-    
+
     RNCallKeep.endCall(callUUID);
     this.isCallActive = false;
     this.currentCallId = null;
-    
+
     // Notify your app the call has ended
     this.callEventEmitter.emit('callEnded', { callUUID });
     this.currentCallUUID = null;
@@ -156,10 +173,10 @@ export class CallService {
   // Accept an incoming call - call this from ChatScreen
   acceptCall(callUUID = this.currentCallUUID) {
     if (!callUUID) return;
-    
+
     this.isCallActive = true;
     RNCallKeep.answerIncomingCall(callUUID);
-    
+
     // Notify your app the call was accepted
     this.callEventEmitter.emit('callAccepted', { callUUID });
   }
@@ -167,10 +184,10 @@ export class CallService {
   // Reject an incoming call - call this from ChatScreen
   rejectCall(callUUID = this.currentCallUUID) {
     if (!callUUID) return;
-    
+
     RNCallKeep.rejectCall(callUUID);
     this.currentCallId = null;
-    
+
     // Notify your app the call was rejected
     this.callEventEmitter.emit('callRejected', { callUUID });
     this.currentCallUUID = null;
@@ -192,13 +209,13 @@ export class CallService {
   // Update call state when there's a change (e.g., mute, video toggle)
   updateCall(options = {}) {
     if (!this.currentCallUUID) return;
-    
+
     const { hasVideo, isMuted } = options;
-    
+
     if (hasVideo !== undefined) {
       // You could update CallKit UI here if needed
     }
-    
+
     if (isMuted !== undefined) {
       // You could update CallKit UI here if needed
     }

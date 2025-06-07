@@ -407,14 +407,16 @@ export default function MeetingPage({ navigation, route }) {
           await MeetingVariable.mediaService.leaveMeeting();
         }
       }
-
+      MeetingVariable.callService.endCall()
       clearMeetingVariable();
       goBack();
     } catch (e) {
       toast.show(e, { type: 'danger', duration: 1300, placement: 'top' });
       MeetingVariable.messages = [];
-      // CallKeepImpl.endIncomingcallAnswer();
+      MeetingVariable.callService.endCall();
       goBack();
+    }
+    finally{
     }
   };
 

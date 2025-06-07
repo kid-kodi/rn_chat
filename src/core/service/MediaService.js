@@ -139,6 +139,7 @@ export class MediaService {
           returned = true;
           if (this.allowed) {
             console.log('[Log]  Server allowed the connection');
+            // create new session call here
             resolve();
           } else {
             reject('[Error]  Server reject the connection');
@@ -188,7 +189,7 @@ export class MediaService {
     user
   ) {
     if (this.joined) {
-      console.warn('[Warning]  Vous avez déjà rejoint une réunion');
+      // console.warn('[Warning]  Vous avez déjà rejoint une réunion');
       return Promise.reject('Vous avez déjà rejoint une réunion');
     }
 
@@ -199,7 +200,7 @@ export class MediaService {
       this.displayName = user.fullName;
       this.deviceName = user.fullName;
       // this.avatar = avatar;
-      this.avatar = avatarURL(user.profilPicture ? avatar : "defaultProfile.jpeg");
+      this.avatar = avatarURL(user.profilPicture ? user.profilPicture : "defaultProfile.jpeg");
       console.log('[Log]  Try to join meeting with chatId = ' + chatId);
 
       try {

@@ -92,7 +92,7 @@ export default function GroupInfoScreen({ route, navigation }) {
       newChatUsers.push(user._id);
       const response = await create(newChatUsers, chatName, true);
       if (response.success) {
-        navigation.navigate('TAB');
+        navigation.navigate('CHAT', { chatId: response._id });
       } else {
         toast.show(response.message, {
           type: 'danger',

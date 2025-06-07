@@ -24,16 +24,17 @@ import {
   requestNotificationPermissions,
   onTokenRefresh,
   handleIncomingCall,
+  setupFirebaseMessaging,
+  updateBadgeCount
 } from './services/NotificationService';
-import { Platform, AppState } from 'react-native';
+import { Platform, AppState, PermissionsAndroid } from 'react-native';
 import PushNotification from 'react-native-push-notification';
 import PushNotificationIOS from '@react-native-community/push-notification-ios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MainNavigator from './navigations/MainNavigator';
-import { navigationRef } from './utils/RootNavigation';
+import { navigate, navigationRef } from './utils/RootNavigation';
 import UpdateChecker from './components/UpdateChecker';
 import { SignalingProvider } from './contexts/SignalingProvider';
-
 
 export default function App() {
   const appState = useRef(AppState.currentState);
@@ -44,8 +45,6 @@ export default function App() {
     // Call this before creating the channel.
     // requestNotificationPermission();
     Strings.setLanguage('FR');
-
-
   }, [messaging]);
 
   // Configure notifications on app start
@@ -67,7 +66,7 @@ export default function App() {
   // Main setup function
   const setupApp = async () => {
     // Initialize notifications
-    initializeNotifications();
+    configureNotifications(handleNotification);
 
     // Set up Firebase Cloud Messaging
     await setupFirebaseMessaging();
@@ -77,54 +76,6 @@ export default function App() {
 
     // Reset badge count when app opens
     updateBadgeCount(0);
-  };
-
-  // Initialize local notifications
-  const initializeNotifications = () => {
-    configureNotifications(handleNotification);
-  };
-
-  // Set up Firebase Cloud Messaging
-  const setupFirebaseMessaging = async () => {
-    try {
-      // Request permissions
-      const hasPermission = await requestNotificationPermissions();
-
-      if (hasPermission) {
-        console.log('Notification permissions granted');
-
-        // Get and save FCM token
-        const token = await getFCMToken();
-        if (token) {
-          console.log('FCM Token:', token);
-          await AsyncStorage.setItem('fcmToken', token);
-          await saveFCMToken(token); // Send to your backend
-        }
-
-        // Listen for token refresh
-        const unsubscribeTokenRefresh = onTokenRefresh(async (newToken) => {
-          console.log('FCM token refreshed:', newToken);
-          await saveFCMToken(newToken); // Send to your backend
-        });
-
-        // Handle foreground messages
-        const unsubscribeForegroundMessage = messaging().onMessage(async (remoteMessage) => {
-          console.log('Message received in foreground:', remoteMessage);
-          handleIncomingMessage(remoteMessage);
-        });
-
-        // Check for initial notification (app opened from killed state)
-        await checkInitialNotification();
-
-        // Return unsubscribe functions for cleanup
-        return () => {
-          unsubscribeTokenRefresh();
-          unsubscribeForegroundMessage();
-        };
-      }
-    } catch (error) {
-      console.error('Error setting up Firebase messaging:', error);
-    }
   };
 
   const handleAppStateChange = (nextAppState) => {
@@ -144,7 +95,7 @@ export default function App() {
         console.log('Processing pending call action:', pendingAction.data);
         // Navigate to call screen with the pending call data
         if (navigationRef.current) {
-          navigationRef.current.navigate('IncomingCall', {
+          navigate('Call', {
             callData: pendingAction.data,
             isIncoming: true
           });
@@ -156,53 +107,53 @@ export default function App() {
   };
 
 
-  // Check if app was opened from a notification
-  const checkInitialNotification = async () => {
-    // Get notification that opened the app from killed state
-    const initialNotification = await messaging().getInitialNotification();
+  // // Check if app was opened from a notification
+  // const checkInitialNotification = async () => {
+  //   // Get notification that opened the app from killed state
+  //   const initialNotification = await messaging().getInitialNotification();
 
-    if (initialNotification) {
-      console.log('App opened from killed state by notification:', initialNotification);
-      handleDeepLinking(initialNotification.data);
-    }
-  };
+  //   if (initialNotification) {
+  //     console.log('App opened from killed state by notification:', initialNotification);
+  //     handleDeepLinking(initialNotification.data);
+  //   }
+  // };
 
 
-  // Handle incoming messages based on type
-  const handleIncomingMessage = (message) => {
-    const { data, notification } = message;
-    const notificationType = data?.type;
+  // // Handle incoming messages based on type
+  // const handleIncomingMessage = (message) => {
+  //   const { data, notification } = message;
+  //   const notificationType = data?.type;
 
-    // Check if this is a call notification
-    if (notificationType === 'call') {
-      handleIncomingCall(data);
-    } else {
-      // Regular chat message or other notification
-      displayLocalNotification(notification?.title, notification?.body, data);
-    }
-  };
+  //   // Check if this is a call notification
+  //   if (notificationType === 'call') {
+  //     handleIncomingCall(data);
+  //   } else {
+  //     // Regular chat message or other notification
+  //     displayLocalNotification(notification?.title, notification?.body, data);
+  //   }
+  // };
 
-  // Display a local notification
-  const displayLocalNotification = (title, body, data = {}) => {
-    const channelId = data.type === 'call' ? 'incoming-calls' : 'chat-messages';
+  // // Display a local notification
+  // const displayLocalNotification = (title, body, data = {}) => {
+  //   const channelId = data.type === 'call' ? 'incoming-calls' : 'chat-messages';
 
-    PushNotification.localNotification({
-      channelId,
-      title,
-      message: body,
-      playSound: true,
-      soundName: data.type === 'call' ? 'ringtone' : 'default',
-      userInfo: data,
-      // For Android
-      smallIcon: 'ic_notification',
-      largeIcon: '',
-      // For iOS
-      category: data.type === 'call' ? 'callinvite' : 'message',
-    });
+  //   PushNotification.localNotification({
+  //     channelId,
+  //     title,
+  //     message: body,
+  //     playSound: true,
+  //     soundName: data.type === 'call' ? 'ringtone' : 'default',
+  //     userInfo: data,
+  //     // For Android
+  //     smallIcon: 'ic_notification',
+  //     largeIcon: '',
+  //     // For iOS
+  //     category: data.type === 'call' ? 'callinvite' : 'message',
+  //   });
 
-    // Update badge count
-    updateBadgeCount();
-  };
+  //   // Update badge count
+  //   updateBadgeCount();
+  // };
 
   // Handle notifications when clicked
   const handleNotification = (notification) => {
@@ -222,13 +173,10 @@ export default function App() {
   const handleCallAction = (callData) => {
     if (callData.action === 'accept') {
       // Navigate to call screen
-      if (navigationRef.current) {
-        navigationRef.current.navigate('INCOMING_CALL', {
-          callData,
-          isIncoming: true
-        });
-      }
-      console.log('Navigating to call screen with data:', callData);
+      navigate('CALL', {
+        callData,
+        isIncoming: true
+      });
     } else {
       // Reject call - notify server
       console.log('Call rejected:', callData.call_id);
@@ -244,39 +192,39 @@ export default function App() {
     if (data.chatId) {
       // Navigate to specific chat
       console.log('Navigate to chat:', data.chatId);
-      navigationRef.current.navigate('CHAT', { chatId: data.chatId });
+      navigate('CHAT', { chatId: data.chatId });
     } else if (data.screen) {
       // Navigate to a specific screen
       console.log('Navigate to screen:', data.screen);
-      navigationRef.current.navigate(data.screen, data.params);
+      navigate(data.screen, data.params);
     }
   };
 
-  // Update badge count for iOS and some Android launchers
-  const updateBadgeCount = async (manualCount = null) => {
-    let count;
+  // // Update badge count for iOS and some Android launchers
+  // const updateBadgeCount = async (manualCount = null) => {
+  //   let count;
 
-    if (manualCount !== null) {
-      count = manualCount;
-    } else {
-      // Get unread count from storage or increment
-      try {
-        const currentCount = await AsyncStorage.getItem('unreadCount');
-        count = currentCount ? parseInt(currentCount) + 1 : 1;
-        await AsyncStorage.setItem('unreadCount', count.toString());
-      } catch (error) {
-        console.log('Error updating badge count:', error);
-        count = 1;
-      }
-    }
+  //   if (manualCount !== null) {
+  //     count = manualCount;
+  //   } else {
+  //     // Get unread count from storage or increment
+  //     try {
+  //       const currentCount = await AsyncStorage.getItem('unreadCount');
+  //       count = currentCount ? parseInt(currentCount) + 1 : 1;
+  //       await AsyncStorage.setItem('unreadCount', count.toString());
+  //     } catch (error) {
+  //       console.log('Error updating badge count:', error);
+  //       count = 1;
+  //     }
+  //   }
 
-    // Set badge count
-    if (Platform.OS === 'ios') {
-      PushNotificationIOS.setApplicationIconBadgeNumber(count);
-    } else {
-      PushNotification.setApplicationIconBadgeNumber(count);
-    }
-  };
+  //   // Set badge count
+  //   if (Platform.OS === 'ios') {
+  //     PushNotificationIOS.setApplicationIconBadgeNumber(count);
+  //   } else {
+  //     PushNotification.setApplicationIconBadgeNumber(count);
+  //   }
+  // };
 
   return (
     <ToastProvider>
