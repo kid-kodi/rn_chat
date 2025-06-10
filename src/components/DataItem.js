@@ -11,8 +11,9 @@ import { BASE_API_URL } from '@env';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Colors from '../assets/styles/Colors';
 import { moderateScaleVertical } from '../assets/styles/responsiveSize';
+import CustomImageView from './CustomImage';
 
-const imageSize = 50;
+const imageSize = 40;
 
 export default function DataItem(props) {
   const {
@@ -34,16 +35,22 @@ export default function DataItem(props) {
     <TouchableWithoutFeedback onPress={props.onPress}>
       <View style={styles.container}>
         {!icon && !hideImage && (
-          <ProfileImage
-            uri={
-              image && image !== '' ? `${BASE_API_URL}/image/${image}` : null
-            }
-            size={imageSize}
+          // <ProfileImage
+          //   uri={
+          //     image && image !== '' ? `${BASE_API_URL}/image/${image}` : null
+          //   }
+          //   size={imageSize}
+          // />
+          <CustomImageView
+            source={`${BASE_API_URL}/image/${image}`}
+            firstName={title}
+            size={40}
+            fontSize={20}
           />
         )}
 
         {icon && (
-          <View style={[styles.leftIconContainer, {backgroundColor : Colors.blueColor}]}>
+          <View style={[styles.leftIconContainer, { backgroundColor: Colors.blueColor }]}>
             <Icon name={icon} size={20} color={Colors.whiteColor} />
           </View>
         )}
@@ -173,12 +180,12 @@ const styles = StyleSheet.create({
     color: Colors.white,
     letterSpacing: 0.3,
   },
-  joinButton : {
+  joinButton: {
     backgroundColor: Colors.green,
     padding: 5,
-    borderRadius : 100
+    borderRadius: 100
   },
-  joinButtonText : {
+  joinButtonText: {
     color: Colors.whiteColor,
   }
 });

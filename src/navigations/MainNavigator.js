@@ -148,10 +148,7 @@ export default function MainNavigator() {
             <Stack.Screen
               name="CONTACT"
               component={Contact}
-              options={{
-                headerTitle: '',
-                headerShadowVisible: false,
-              }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="MEDIA_GALLERY"

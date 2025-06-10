@@ -188,6 +188,9 @@ export default function ChatProvider({ children }) {
   };
 
   const removeUserFromChat = async (chatId, sender, removeUser) => {
+    console.log(chatId)
+    console.log(sender)
+    console.log(removeUser)
     const response = await api.put(`/api/chats/${chatId}/remove`, {
       userId: removeUser._id,
     });

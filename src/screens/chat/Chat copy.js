@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { SafeAreaView, FlatList, View, KeyboardAvoidingView, Platform, Keyboard, Modal, Alert, Animated, Pressable, Linking, ActionSheetIOS } from 'react-native'
+import { SafeAreaView, FlatList, View, KeyboardAvoidingView, Platform, Keyboard, Modal, Alert, Animated, Pressable } from 'react-native'
 import { useUser } from '../../contexts/UserProvider';
 import { Image } from 'react-native';
 import { Text } from 'react-native';
@@ -30,7 +30,6 @@ import RNCallKeep from 'react-native-callkeep';
 
 import ChatHeader from './ChatHeader';
 import { TypingIndicator } from '../../components/TypingIndicator';
-import AudioRecordingManager from '../../components/AudioRecordingManager';
 
 const MESSAGES_PER_PAGE = 50;
 
@@ -73,10 +72,6 @@ export default function Chat({ route }) {
 
   const [isCallLoading, setIsCallLoading] = useState(false);
 
-  // Add these state variables for audio recording
-  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
-  const [audioMessage, setAudioMessage] = useState(null);
-
   const recordingRef = useRef(null);
   const durationTimerRef = useRef(null);
 
@@ -90,10 +85,9 @@ export default function Chat({ route }) {
 
       setChat(response.chat);
       setChatInfo({
-        chatId: response?.chat?.isGroupChat ? response?.chat?._id : response?.chat?.users[0]._id,
         isGroupChat: response?.chat?.isGroupChat,
-        avatar: response?.chat?.isGroupChat ? response?.chat?.chatImage : response?.chat?.users[0]?.profilPicture,
-        name: response?.chat?.isGroupChat ? response?.chat?.chatName : response?.chat?.users[0]?.fullName,
+        avatar: response?.chat?.isGroupChat ? response?.chat?.image : response?.chat?.users[0]?.profilPicture,
+        name: response?.chat?.isGroupChat ? response?.chat?.name : response?.chat?.users[0]?.fullName,
         participants: response?.chat?.isGroupChat ? response?.chat?.users : response?.chat?.users[0],
         status: response?.chat?.isGroupChat ? `participants ${response?.chat?.users?.length}` : response?.chat?.users[0]?.status === "online" ? 'En ligne' : "Hors ligne"
       })
@@ -196,109 +190,109 @@ export default function Chat({ route }) {
   };
 
 
-  // const openFile = async (item) => {
-  //   try {
-  //     console.log(item.name);
-  //     const filePath = `${MeetingVariable.fileService.getBundlePath()}/${item.name}`;
+  const openFile = async (item) => {
+    try {
+      console.log(item.name);
+      const filePath = `${MeetingVariable.fileService.getBundlePath()}/${item.name}`;
 
-  //     console.log("####filePath")
-  //     console.log(filePath)
+      console.log("####filePath")
+      console.log(filePath)
 
-  //     // First check if file exists
-  //     const exists = await MeetingVariable.fileService.fileExists(filePath);
+      // First check if file exists
+      const exists = await MeetingVariable.fileService.fileExists(filePath);
 
-  //     console.log(exists)
+      console.log(exists)
 
-  //     if (!exists) {
-  //       // File doesn't exist, download it first
-  //       await downloadFile(item); // Pass the item/message to download
-  //     }
+      if (!exists) {
+        // File doesn't exist, download it first
+        await downloadFile(item); // Pass the item/message to download
+      }
 
-  //     // Now open the file
-  //     FileViewer.open(filePath)
-  //       .then(() => {
-  //         console.log('File opened successfully');
-  //       })
-  //       .catch((error) => {
-  //         console.error('Error opening file:', error);
-  //       });
+      // Now open the file
+      FileViewer.open(filePath)
+        .then(() => {
+          console.log('File opened successfully');
+        })
+        .catch((error) => {
+          console.error('Error opening file:', error);
+        });
 
-  //   } catch (error) {
-  //     console.error('Error in openFile process:', error);
-  //   }
-  // };
+    } catch (error) {
+      console.error('Error in openFile process:', error);
+    }
+  };
 
   // Modified downloadFile to work with both messages and items
-  // const downloadFile = async (item) => {
-  //   try {
-  //     // Handle both message objects and direct file items
-  //     const fileName = item.name;
-  //     const filePath = `${MeetingVariable.fileService.getBundlePath()}/${fileName}`;
-  //     const downloadUrl = `${BASE_API_URL}/image/${fileName}`;
+  const downloadFile = async (item) => {
+    try {
+      // Handle both message objects and direct file items
+      const fileName = item.name;
+      const filePath = `${MeetingVariable.fileService.getBundlePath()}/${fileName}`;
+      const downloadUrl = `${BASE_API_URL}/image/${fileName}`;
 
-  //     // If it's a message object, update its status
-  //     if (item._id) {
-  //       item.fileJobStatus = FileJobStatus.progressing;
-  //       setMessages(prev =>
-  //         prev.map(msg =>
-  //           msg._id === item._id ? { ...item } : msg
-  //         )
-  //       );
-  //     }
+      // If it's a message object, update its status
+      if (item._id) {
+        item.fileJobStatus = FileJobStatus.progressing;
+        setMessages(prev =>
+          prev.map(msg =>
+            msg._id === item._id ? { ...item } : msg
+          )
+        );
+      }
 
-  //     await MeetingVariable.fileService.download(
-  //       downloadUrl,
-  //       filePath,
-  //       (bytesSent, totalBytes) => {
-  //         if (item._id) {
-  //           setMessages(prev =>
-  //             prev.map(msg =>
-  //               msg._id === item._id
-  //                 ? { ...msg, bytesSent, totalBytes }
-  //                 : msg
-  //             )
-  //           );
-  //         }
-  //       },
-  //       (status) => {
-  //         if (item._id) {
-  //           setMessages(prev =>
-  //             prev.map(msg =>
-  //               msg._id === item._id
-  //                 ? { ...msg, fileJobStatus: status }
-  //                 : msg
-  //             )
-  //           );
-  //         }
-  //       }
-  //     );
+      await MeetingVariable.fileService.download(
+        downloadUrl,
+        filePath,
+        (bytesSent, totalBytes) => {
+          if (item._id) {
+            setMessages(prev =>
+              prev.map(msg =>
+                msg._id === item._id
+                  ? { ...msg, bytesSent, totalBytes }
+                  : msg
+              )
+            );
+          }
+        },
+        (status) => {
+          if (item._id) {
+            setMessages(prev =>
+              prev.map(msg =>
+                msg._id === item._id
+                  ? { ...msg, fileJobStatus: status }
+                  : msg
+              )
+            );
+          }
+        }
+      );
 
-  //     if (item._id) {
-  //       setMessages(prev =>
-  //         prev.map(msg =>
-  //           msg._id === item._id
-  //             ? { ...msg, filePath, fileJobStatus: FileJobStatus.completed }
-  //             : msg
-  //         )
-  //       );
-  //     }
+      if (item._id) {
+        setMessages(prev =>
+          prev.map(msg =>
+            msg._id === item._id
+              ? { ...msg, filePath, fileJobStatus: FileJobStatus.completed }
+              : msg
+          )
+        );
+      }
 
-  //     return filePath; // Return the path for the openFile function to use
+      return filePath; // Return the path for the openFile function to use
 
-  //   } catch (err) {
-  //     if (item._id) {
-  //       setMessages(prev =>
-  //         prev.map(msg =>
-  //           msg._id === item._id
-  //             ? { ...msg, fileJobStatus: FileJobStatus.failed }
-  //             : msg
-  //         )
-  //       );
-  //     }
-  //     console.error('[Error] Failed to download file:', err);
-  //     throw err; // Re-throw the error so openFile can handle it
-  //   }
-  // };
+    } catch (err) {
+      if (item._id) {
+        setMessages(prev =>
+          prev.map(msg =>
+            msg._id === item._id
+              ? { ...msg, fileJobStatus: FileJobStatus.failed }
+              : msg
+          )
+        );
+      }
+      console.error('[Error] Failed to download file:', err);
+      throw err; // Re-throw the error so openFile can handle it
+    }
+  };
 
   const cancelMediaPreview = () => {
     setMediaPreview(null);
@@ -431,207 +425,6 @@ export default function Chat({ route }) {
     );
   }
 
-
-  // Handle message press (tap)
-  const handleMessagePress = (message) => {
-    switch (message.type) {
-      case 'text':
-        console.log('Text message pressed:', message.content);
-        break;
-
-      case 'image':
-        // Open image in full screen or image viewer
-        Alert.alert(
-          'Image Message',
-          'Open image in full screen viewer?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'View',
-              onPress: () => {
-                // Here you would typically navigate to an image viewer
-                console.log('Opening image:', message.uri);
-                // Example: navigation.navigate('ImageViewer', { uri: message.uri });
-              }
-            },
-          ]
-        );
-        break;
-
-      case 'video':
-        // Open video player
-        Alert.alert(
-          'Video Message',
-          'Open video player?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Play',
-              onPress: () => {
-                console.log('Playing video:', message.uri);
-                // Example: navigation.navigate('VideoPlayer', { uri: message.uri });
-              }
-            },
-          ]
-        );
-        break;
-
-      case 'audio':
-        // Audio play/pause is handled within the MessageItem component
-        console.log('Audio message pressed - handled by component');
-        break;
-
-      case 'document':
-        // Open document
-        Alert.alert(
-          'Document',
-          `Open ${message.fileName}?`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Open',
-              onPress: () => {
-                if (message.uri) {
-                  Linking.openURL(message.uri).catch(err => {
-                    Alert.alert('Error', 'Cannot open document');
-                    console.error('Cannot open URL:', err);
-                  });
-                }
-              }
-            },
-          ]
-        );
-        break;
-
-      default:
-        console.log('Unknown message type pressed');
-    }
-  };
-
-  // Handle message long press
-  const handleMessageLongPress = (message) => {
-    const options = [
-      'Reply',
-      'Forward',
-      'Copy',
-      'Delete',
-      'Share',
-      'Info',
-      'Cancel'
-    ];
-
-    const cancelButtonIndex = options.length - 1;
-    const destructiveButtonIndex = 3; // Delete option
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options,
-          cancelButtonIndex,
-          destructiveButtonIndex,
-          title: 'Message Options',
-        },
-        (buttonIndex) => {
-          handleActionSheetPress(buttonIndex, message);
-        }
-      );
-    } else {
-      // For Android, you can use a custom action sheet or modal
-      Alert.alert(
-        'Message Options',
-        'What would you like to do with this message?',
-        [
-          { text: 'Reply', onPress: () => handleActionSheetPress(0, message) },
-          { text: 'Forward', onPress: () => handleActionSheetPress(1, message) },
-          { text: 'Copy', onPress: () => handleActionSheetPress(2, message) },
-          { text: 'Delete', onPress: () => handleActionSheetPress(3, message), style: 'destructive' },
-          { text: 'Share', onPress: () => handleActionSheetPress(4, message) },
-          { text: 'Info', onPress: () => handleActionSheetPress(5, message) },
-          { text: 'Cancel', style: 'cancel' },
-        ]
-      );
-    }
-  };
-
-  // Handle action sheet button press
-  const handleActionSheetPress = async (buttonIndex, message) => {
-    switch (buttonIndex) {
-      case 0: // Reply
-        // console.log('Reply to message:', message.id);
-        // Example: setReplyingTo(message);
-        Alert.alert('Reply', `Replying to: "${message.text || message.fileName || 'Media'}"`);
-        break;
-
-      case 1: // Forward
-        // console.log('Forward message:', message.id);
-        // Example: navigation.navigate('ForwardMessage', { message });
-        Alert.alert('Forward', 'Message will be forwarded');
-        break;
-
-      case 2: // Copy
-        if (message.type === 'text') {
-          // Copy text to clipboard
-          import('@react-native-clipboard/clipboard').then(({ default: Clipboard }) => {
-            Clipboard.setString(message.text);
-            Alert.alert('Copied', 'Text copied to clipboard');
-          });
-        } else {
-          Alert.alert('Copy', 'Media/Document link copied');
-        }
-        break;
-
-      case 3: // Delete
-        Alert.alert(
-          'Delete Message',
-          'Are you sure you want to delete this message?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Delete',
-              style: 'destructive',
-              onPress: () => {
-                console.log('Delete message:', message.id);
-                // Example: deleteMessage(message.id);
-                Alert.alert('Deleted', 'Message deleted');
-              }
-            },
-          ]
-        );
-        break;
-
-      case 4: // Share
-        try {
-          const shareContent = {
-            message: message.type === 'text' ? message.text : message.fileName || 'Shared content',
-            url: message.uri || undefined,
-          };
-
-          await Share.share(shareContent);
-        } catch (error) {
-          console.error('Share error:', error);
-        }
-        break;
-
-      case 5: // Info
-        const infoText = `
-          Message ID: ${message.id}
-          Type: ${message.type}
-          Time: ${message.timestamp}
-          ${message.isOwn ? 'Sent by: You' : `Sent by: ${message.senderName || 'Unknown'}`}
-          ${message.fileSize ? `Size: ${message.fileSize}` : ''}
-                  `.trim();
-
-        Alert.alert('Message Info', infoText);
-        break;
-
-      default:
-        // Cancel or unknown
-        break;
-    }
-  };
-
-
-
   const renderMessage = ({ item }) => {
     const isUserMessage = item.sender._id === user._id; // Current user ID
 
@@ -640,17 +433,25 @@ export default function Chat({ route }) {
         styles.messageContainer,
         isUserMessage ? styles.userMessageContainer : styles.contactMessageContainer
       ]}>
-        <View style={{ maxWidth: "100%" }}>
+        {!isUserMessage && (
+          <CustomImageView
+            source={`${BASE_API_URL}/image/${item.sender?.profilePicture}`}
+            firstName={item.sender?.fullName}
+            size={40}
+            fontSize={20}
+          />
+        )}
+        <View style={{ maxWidth: "80%" }}>
           <MessageBubble
             message={item}
-            isOwn={isUserMessage}
             user={user}
-            onPress={handleMessagePress}
-            onLongPress={handleMessageLongPress}
+            openFile={openFile}
+            handleMessageLongPress={handleMessageLongPress}
             actionMenuVisible={actionMenuVisible}
             closeActionMenu={closeActionMenu}
             fadeAnim={fadeAnim}
             handleAction={handleAction}
+            formatChatDate={formatChatDate}
           />
         </View>
       </View>
@@ -658,18 +459,18 @@ export default function Chat({ route }) {
   }
 
 
-  // const handleMessageLongPress = (message) => {
-  //   setSelectedMessage(message);
+  const handleMessageLongPress = (message) => {
+    setSelectedMessage(message);
 
-  //   // Fade in animation
-  //   Animated.timing(fadeAnim, {
-  //     toValue: 1,
-  //     duration: 200,
-  //     useNativeDriver: true,
-  //   }).start();
+    // Fade in animation
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
 
-  //   setActionMenuVisible(true);
-  // };
+    setActionMenuVisible(true);
+  };
 
   const closeActionMenu = () => {
     // Fade out animation
@@ -800,22 +601,8 @@ export default function Chat({ route }) {
     Keyboard.dismiss();
   };
 
-  const startRecording = () => {
-    setIsRecording(true);
-    // textInputRef.current?.blur(); // Hide keyboard
-  }
+  const startRecording = () => { }
   const stopRecording = () => { }
-
-  // Handle audio message sent
-  const handleAudioSent = (audioMessage) => {
-    // addMessage(audioMessage);
-    setIsRecording(false);
-  };
-
-  // Cancel audio recording
-  const handleAudioCancel = () => {
-    setIsRecording(false);
-  };
 
   const handleOnMessageChange = text => {
     if (text.length > 0 && !isTyping) {
@@ -841,61 +628,6 @@ export default function Chat({ route }) {
       roomId: chat?._id,
       userId: user?._id
     });
-  };
-
-  const handleSendAudioMessage = async (audioData) => {
-    if (!chat || !socket) return;
-
-    try {
-      const messageData = {
-        chat: chat._id,
-        sender: user,
-        content: "Audio message",
-        type: "audio",
-        createdAt: new Date().toISOString(),
-        file: {
-          name: `audio_${Date.now()}.m4a`,
-          type: 'audio/m4a',
-          size: audioData.fileSize,
-          uri: audioData.uri
-        },
-        fileJobType: FileJobType.upload,
-        duration: audioData.duration,
-        fileJobStatus: FileJobStatus.progressing,
-        replyTo: replyingTo && {
-          message: replyingTo._id,
-          user: replyingTo.sender._id,
-        },
-      };
-
-      // Optimistically add message to UI
-      const tempMessage = {
-        ...messageData,
-        _id: `temp-${Date.now()}`,
-        sending: true,
-      };
-
-      setMessages(prev => [tempMessage, ...prev]);
-      setAudioMessage(null);
-
-      // send to server
-      const response = await api.post(`/api/messages`, messageData);
-
-      // Replace temp message with saved message
-      setMessages(prev =>
-        prev.map(msg =>
-          msg._id === tempMessage._id ? response.data : msg
-        )
-      );
-
-      socket.emit('send_message', {
-        chatId: chat._id,
-        senderId: user._id,
-        message: response.data,
-      });
-    } catch (error) {
-      console.error('Audio message failed to send', error);
-    }
   };
 
   const handleSendMessage = async () => {
@@ -1211,7 +943,7 @@ export default function Chat({ route }) {
 
 
           {
-            isTyping && <TypingIndicator isVisible={isTyping} />
+            isTyping && <TypingIndicator isVisible={isTyping}/>
           }
 
 
@@ -1221,19 +953,7 @@ export default function Chat({ route }) {
 
             {mediaPreview && renderMediaPreview()}
 
-            {/* Show audio recorder when recording */}
-            {showAudioRecorder && (
-              <AudioRecordingManager
-                onSend={(audioData) => {
-                  handleSendAudioMessage(audioData);
-                  setShowAudioRecorder(false);
-                }}
-                onCancel={() => setShowAudioRecorder(false)}
-              />
-            )}
-
-
-            {!showAudioRecorder && (<View style={styles.inputContainer}>
+            <View style={styles.inputContainer}>
               <TouchableOpacity
                 style={styles.attachButton}
                 onPress={handleAttachmentPress}
@@ -1253,36 +973,56 @@ export default function Chat({ route }) {
                 />
               </View>
 
-
-              {messageText.trim() !== '' || mediaPreview ? (
-                <TouchableOpacity
-                  style={styles.sendButton}
-                  onPress={handleSendMessage}
-                >
-                  <Ionicons name="send" size={24} color="#333" />
-                </TouchableOpacity>
+              {isRecording ? (
+                <View style={styles.recordingContainer}>
+                  <Text style={styles.recordingTime}>{formatDuration(recordingDuration)}</Text>
+                  <TouchableOpacity
+                    style={styles.sendButton}
+                    onPress={() => stopRecording()}
+                  >
+                    <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.cancelRecordingButton}
+                    onPress={() => stopRecording(true)}
+                  >
+                    <Ionicons name="close-circle" size={24} color="#FF6B6B" />
+                  </TouchableOpacity>
+                </View>
               ) : (
                 <>
-                  {/* <TouchableOpacity
-                    style={styles.micButton}
-                    onPress={() => setShowAudioRecorder(true)}
-                  >
-                    <Ionicons name="mic-outline" size={24} color="#333" />
-                  </TouchableOpacity> */}
-                  <TouchableOpacity
-                    style={styles.micButton}
-                    onPress={takePhoto}
-                  >
-                    <Ionicons name="camera-outline" size={24} color="#333" />
-                  </TouchableOpacity>
+                  {messageText.trim() !== '' || mediaPreview ? (
+                    <TouchableOpacity
+                      style={styles.sendButton}
+                      onPress={handleSendMessage}
+                    >
+                      <Ionicons name="send" size={24} color="#333" />
+                    </TouchableOpacity>
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        style={styles.micButton}
+                        onPress={startRecording}
+                        onLongPress={startRecording}
+                      >
+                        <Ionicons name="mic-outline" size={24} color="#333" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.micButton}
+                        onPress={takePhoto}
+                      >
+                        <Ionicons name="camera-outline" size={24} color="#333" />
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </>
               )}
             </View>
-            )}
             {showAttachmentOptions && renderAttachmentOptions()}
           </KeyboardAvoidingView>
+
         </>
       }
-    </SafeAreaView >
+    </SafeAreaView>
   )
 }

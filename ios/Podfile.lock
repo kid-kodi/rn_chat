@@ -1275,6 +1275,8 @@ PODS:
     - React-Core
   - ReactNativeLocalization (2.3.2):
     - React-Core
+  - RNAudioRecorderPlayer (3.6.12):
+    - React-Core
   - RNBootSplash (6.3.8):
     - React-Core
   - RNCallKeep (4.3.16):
@@ -1438,6 +1440,7 @@ DEPENDENCIES:
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativeIncallManager (from `../node_modules/react-native-incall-manager`)
   - ReactNativeLocalization (from `../node_modules/react-native-localization`)
+  - RNAudioRecorderPlayer (from `../node_modules/react-native-audio-recorder-player`)
   - RNBootSplash (from `../node_modules/react-native-bootsplash`)
   - RNCallKeep (from `../node_modules/react-native-callkeep`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
@@ -1615,6 +1618,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-incall-manager"
   ReactNativeLocalization:
     :path: "../node_modules/react-native-localization"
+  RNAudioRecorderPlayer:
+    :path: "../node_modules/react-native-audio-recorder-player"
   RNBootSplash:
     :path: "../node_modules/react-native-bootsplash"
   RNCallKeep:
@@ -1749,6 +1754,7 @@ SPEC CHECKSUMS:
   ReactCommon: 45b5d4f784e869c44a6f5a8fad5b114ca8f78c53
   ReactNativeIncallManager: bfc9c67358cd524882a7c4116dcb311ac2293d4b
   ReactNativeLocalization: fb171138cdc80d5d0d4f20243d2fc82c2b3cc48f
+  RNAudioRecorderPlayer: 224c7de87722938aedce04000d09baa633148f5b
   RNBootSplash: 95181f0d573171efb0dec33f96aebdb64203f8e3
   RNCallKeep: 94bbe46b807ccf58e9f6ec11bc4d6087323a1954
   RNCAsyncStorage: ec53e44dc3e75b44aa2a9f37618a49c3bc080a7a

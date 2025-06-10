@@ -20,7 +20,7 @@ import { useChat } from '../../contexts/ChatProvider';
 import DataItem from '../../components/DataItem';
 import Colors from '../../constants/Colors';
 import { useUser } from '../../contexts/UserProvider';
-import axiosInstance from '../../utils/AxiosInstance';
+import { useApi } from '../../contexts/ApiProvider';
 
 const chatSettingsSchema = Yup.object().shape({
   chatName: Yup.string().required('Champs requis !'),
@@ -30,10 +30,11 @@ export default function ChatSetting(props) {
   const id = props.route.params?.id;
 
   const [chat, setChat] = useState();
+  const api = useApi();
 
   useEffect(() => {
     (async () => {
-      const response = await axiosInstance.get(`/api/chats/${id}`);
+      const response = await api.get(`/api/chats/${id}`);
       setChat(response.chat)
     })()
   }, [id]);
@@ -74,7 +75,7 @@ export default function ChatSetting(props) {
 
   return (
     <Screen>
-      <Header leftText="Chat Settings" />
+      <Header leftText="Paramètres" />
       <ScrollView contentContainerStyle={styles.scrollView}>
         <ProfileImage
           showEditButton={true}
@@ -121,7 +122,7 @@ export default function ChatSetting(props) {
                 type={u._id !== user._id && 'link'}
                 onPress={() =>
                   u._id !== user._id &&
-                  props.navigation.navigate('CONTACT', { currentUser: u, chat })
+                  props.navigation.navigate('CONTACT', { id: u._id, chat })
                 }
               />
             );

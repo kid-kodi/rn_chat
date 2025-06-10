@@ -112,7 +112,7 @@ export default function ChatHeader({ chatInfo, chat }) {
         onPress={() =>
           chatInfo?.isGroupChat
             ? navigate('CHAT_SETTINGS', { id: chatInfo?.chatId })
-            : navigate('CONTACT', { id: chatInfo?.participants[0]._id })
+            : navigate('CONTACT', { id: chat?.users[0]._id, chat })
         }
       >
         <CustomImageView
