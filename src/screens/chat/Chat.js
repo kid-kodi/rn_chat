@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { SafeAreaView, FlatList, View, KeyboardAvoidingView, Platform, Keyboard, Modal, Alert, Animated, Pressable, Linking, ActionSheetIOS } from 'react-native'
+import { SafeAreaView, FlatList, View, KeyboardAvoidingView, Platform, Keyboard, Modal, Alert, Animated, Pressable, Linking, ActionSheetIOS, PermissionsAndroid } from 'react-native'
 import { useUser } from '../../contexts/UserProvider';
 import { Image } from 'react-native';
 import { Text } from 'react-native';
@@ -7,12 +7,9 @@ import { useApi } from '../../contexts/ApiProvider';
 import { TouchableOpacity } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { styles } from './chatStyles';
-import { formatChatDate } from '../../utils/Utility';
 import { navigate } from '../../utils/RootNavigation';
-import CustomImageView from '../../components/CustomImage';
-import { BASE_API_URL } from '@env';
 import { TextInput } from 'react-native';
-import { debounce, getFileTypeFromMimeType } from '../../utils/Utils';
+import { debounce, getFileNameFromUri, getFileTypeFromMimeType } from '../../utils/Utils';
 import { useSocket } from '../../contexts/SocketProvider';
 import { hasAndroidPermission } from '../../utils/ImagePickerUtil';
 import ImagePicker from 'react-native-image-crop-picker';
@@ -21,18 +18,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { MeetingVariable } from '../../MeetingVariable';
-import { useChat } from '../../contexts/ChatProvider';
-import uuid from 'react-native-uuid';
-import FileViewer from 'react-native-file-viewer';
 import { FileJobStatus, FileJobType } from '../../utils/Types';
 import MessageBubble from './MessageItem';
-import RNCallKeep from 'react-native-callkeep';
 
 import ChatHeader from './ChatHeader';
 import { TypingIndicator } from '../../components/TypingIndicator';
-import AudioRecordingManager from '../../components/AudioRecordingManager';
+
+import AudioRecorderPlayer, { AudioEncoderAndroidType, AudioSourceAndroidType, AVEncoderAudioQualityIOSType, AVEncodingOption, AVModeIOSOption, OutputFormatAndroidType } from 'react-native-audio-recorder-player';
+
+import RNFS, { DocumentDirectoryPath, mkdir } from 'react-native-fs';
 
 const MESSAGES_PER_PAGE = 50;
+const maxDuration = 300; // 5 minutes in seconds
+const minDuration = 1; // minimum 1 second
+
+const audioRecorderPlayer = new AudioRecorderPlayer();
 
 export default function Chat({ route }) {
 
@@ -76,9 +76,16 @@ export default function Chat({ route }) {
   // Add these state variables for audio recording
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [audioMessage, setAudioMessage] = useState(null);
+  // const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState('00:00');
+  const [recordingPath, setRecordingPath] = useState(null);
+  const [duration, setDuration] = useState('00:00');
+  const [hasPermission, setHasPermission] = useState(false);
 
   const recordingRef = useRef(null);
   const durationTimerRef = useRef(null);
+
+  const recordingTimer = useRef(null);
 
   const flatListRef = useRef()
 
@@ -161,6 +168,47 @@ export default function Chat({ route }) {
       loadMessages(chat._id, page + 1);
     }
   }, [loadingMore, hasMore, page]);
+
+
+  const checkPermissions = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const grants = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+        ]);
+
+        if (
+          grants['android.permission.WRITE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED &&
+          grants['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED &&
+          grants['android.permission.RECORD_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED
+        ) {
+          setHasPermission(true);
+        } else {
+          Alert.alert('Permission denied', 'Cannot record audio without permissions');
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+    } else {
+      setHasPermission(true); // iOS permissions handled in Info.plist
+    }
+  };
+
+  useEffect(() => {
+    checkPermissions();
+
+    return () => {
+      if (recordingTimer.current) {
+        clearInterval(recordingTimer.current);
+      }
+      audioRecorderPlayer.stopRecorder();
+      audioRecorderPlayer.stopPlayer();
+      audioRecorderPlayer.removeRecordBackListener();
+      audioRecorderPlayer.removePlayBackListener();
+    };
+  }, []);
 
   useEffect(() => {
     // if newChat get chat by selected users id
@@ -800,21 +848,119 @@ export default function Chat({ route }) {
     Keyboard.dismiss();
   };
 
-  const startRecording = () => {
-    setIsRecording(true);
-    // textInputRef.current?.blur(); // Hide keyboard
-  }
-  const stopRecording = () => { }
-
-  // Handle audio message sent
-  const handleAudioSent = (audioMessage) => {
-    // addMessage(audioMessage);
-    setIsRecording(false);
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Cancel audio recording
-  const handleAudioCancel = () => {
+  const generateFileName = () => {
+    const timestamp = new Date().getTime();
+    const fileName = `audio_${timestamp}.m4a`;
+    return Platform.OS === 'ios'
+      ? `${RNFS.DocumentDirectoryPath}/recording.m4a`
+      : `${RNFS.ExternalDirectoryPath}/sdcard/recording.mp3`;
+  };
+
+  // Start recording audio
+  const startRecording = async () => {
+
+
+    if (!hasPermission) {
+      await checkPermissions();
+      return;
+    }
+
+    try {
+      setIsRecording(true);
+
+      const result = await audioRecorderPlayer.startRecorder();
+      console.log('Recording started at: ', result);
+
+      audioRecorderPlayer.addRecordBackListener((e) => {
+        const seconds = Math.floor(e.currentPosition / 1000);
+        setRecordingTime(formatTime(seconds));
+
+        // Generate simple waveform data
+        // const amplitude = Math.random() * 50 + 10;
+        // setWaveformData(prev => [...prev.slice(-50), amplitude]);
+
+        // Auto-stop at max duration
+        if (seconds >= maxDuration) {
+          stopRecording();
+        }
+      });
+
+      // setIsPaused(false);
+    } catch (error) {
+      console.error('Start recording error:', error);
+      Alert.alert('Error', 'Failed to start recording');
+    }
+  }
+
+  // Stop recording audio
+  const stopRecording = async () => {
+    try {
+      const result = await audioRecorderPlayer.stopRecorder();
+      audioRecorderPlayer.removeRecordBackListener();
+
+      setIsRecording(false);
+
+      // Check minimum duration
+      const seconds = Math.floor(result / 1000);
+      if (seconds < minDuration) {
+        Alert.alert('Recording too short', `Minimum recording duration is ${minDuration} second(s)`);
+        await deleteRecording();
+        return;
+      }
+
+      setDuration(formatTime(seconds));
+
+      const fileInfo = await RNFS.stat(result);
+      const fileSizeInMB = (fileInfo.size / 1024 / 1024).toFixed(2);
+
+      const fileName = getFileNameFromUri(result);
+      const fileType = getFileTypeFromMimeType(fileName);
+
+      setMediaPreview({
+        type: 'audio',
+        uri: result,
+        duration: recordingTime,
+        name: fileName,
+        mimeType: Platform.OS === "android" ? "audio/mp4" : "audio/m4a",
+        fileType: fileType,
+        size: fileSizeInMB
+      });
+      setMessageType("audio")
+
+      setRecordingTime('00:00');
+
+    } catch (error) {
+      console.error('Stop recording error:', error);
+      Alert.alert('Error', 'Failed to stop recording');
+    }
+  }
+
+  const deleteRecording = async () => {
+    if (recordingPath && await RNFS.exists(recordingPath)) {
+      try {
+        await RNFS.unlink(recordingPath);
+      } catch (error) {
+        console.error('Delete recording error:', error);
+      }
+    }
+    resetRecording();
+  };
+
+  const resetRecording = () => {
+    setRecordingPath(null);
+    setRecordingTime('00:00');
+    setDuration('00:00');
+    setPlayTime('00:00');
+    setWaveformData([]);
     setIsRecording(false);
+    setIsPaused(false);
+    setIsPlaying(false);
   };
 
   const handleOnMessageChange = text => {
@@ -850,15 +996,10 @@ export default function Chat({ route }) {
       const messageData = {
         chat: chat._id,
         sender: user,
-        content: "Audio message",
+        content: "",
         type: "audio",
         createdAt: new Date().toISOString(),
-        file: {
-          name: `audio_${Date.now()}.m4a`,
-          type: 'audio/m4a',
-          size: audioData.fileSize,
-          uri: audioData.uri
-        },
+        file: audioData,
         fileJobType: FileJobType.upload,
         duration: audioData.duration,
         fileJobStatus: FileJobStatus.progressing,
@@ -1221,19 +1362,8 @@ export default function Chat({ route }) {
 
             {mediaPreview && renderMediaPreview()}
 
-            {/* Show audio recorder when recording */}
-            {showAudioRecorder && (
-              <AudioRecordingManager
-                onSend={(audioData) => {
-                  handleSendAudioMessage(audioData);
-                  setShowAudioRecorder(false);
-                }}
-                onCancel={() => setShowAudioRecorder(false)}
-              />
-            )}
 
-
-            {!showAudioRecorder && (<View style={styles.inputContainer}>
+            <View style={styles.inputContainer}>
               <TouchableOpacity
                 style={styles.attachButton}
                 onPress={handleAttachmentPress}
@@ -1263,22 +1393,36 @@ export default function Chat({ route }) {
                 </TouchableOpacity>
               ) : (
                 <>
-                  {/* <TouchableOpacity
-                    style={styles.micButton}
-                    onPress={() => setShowAudioRecorder(true)}
-                  >
-                    <Ionicons name="mic-outline" size={24} color="#333" />
-                  </TouchableOpacity> */}
                   <TouchableOpacity
                     style={styles.micButton}
                     onPress={takePhoto}
                   >
                     <Ionicons name="camera-outline" size={24} color="#333" />
                   </TouchableOpacity>
+
+                  <View style={isRecording && { position: "absolute", left: 0, right: 0, bottom: 0, top: 0 }}>
+                    <View style={styles.recordingContainer}>
+                      {/* Recording Indicator */}
+                      {isRecording && (
+
+                        <View style={styles.recordingIndicator}>
+                          <Ionicons name="recording-outline" size={16} color="red" />
+                          <Text style={styles.recordingTime}>{recordingTime}</Text>
+                          <Text style={styles.recordingText}>Recording...</Text>
+                        </View>
+                      )}
+                      <TouchableOpacity
+                        style={styles.attachButton}
+                        onPressIn={startRecording}
+                        onPressOut={stopRecording}
+                      >
+                        <Ionicons name={isRecording ? "stop" : "mic-outline"} size={24} color={isRecording ? "red" : "#075E54"} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </>
               )}
             </View>
-            )}
             {showAttachmentOptions && renderAttachmentOptions()}
           </KeyboardAvoidingView>
         </>

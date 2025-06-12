@@ -490,72 +490,99 @@ export const styles = StyleSheet.create({
     fontSize: 16,
   },
   customHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingTop: 15,
-      paddingHorizontal: 20,
-      paddingBottom: 15,
-      borderBottomWidth: 1,
-      borderBottomColor: "#efefef"
-    },
-    customHeaderInfo: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 20
-    },
-    customHeaderInfoPrimary: {
-      fontSize: 14,
-      color: Colors.textColor,
-      fontWeight: "bold"
-    },
-    customHeaderInfoSecondary: {
-      fontSize: 14,
-      color: Colors.secondaryTextColor
-    },
-    avatarStatusContainer: {
-      position: 'relative',
-    },
-    headerAvatar: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-    },
-    statusDot: {
-      position: 'absolute',
-      bottom: 0,
-      right: 0,
-      width: 12,
-      height: 12,
-      borderRadius: 6,
-      backgroundColor: '#4CAF50',
-      borderWidth: 2,
-      borderColor: '#fff',
-    },
-    searchContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginHorizontal: 20,
-      justifyContent: "space-between",
-      marginBottom: 20,
-      gap: 5
-    },
-    searchInputContainer: {
-      backgroundColor: Colors.extraLightGrey,
-      borderRadius: 15,
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 15,
-      height: 44,
-      flex: 1
-    },
-    headerIcons: {
-      flexDirection: 'row',
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: Colors.extraLightGrey,
-      height: 44,
-      width: 44,
-      borderRadius: 15,
-    }
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 15,
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#efefef"
+  },
+  customHeaderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20
+  },
+  customHeaderInfoPrimary: {
+    fontSize: 14,
+    color: Colors.textColor,
+    fontWeight: "bold"
+  },
+  customHeaderInfoSecondary: {
+    fontSize: 14,
+    color: Colors.secondaryTextColor
+  },
+  avatarStatusContainer: {
+    position: 'relative',
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  statusDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#4CAF50',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    justifyContent: "space-between",
+    marginBottom: 20,
+    gap: 5
+  },
+  searchInputContainer: {
+    backgroundColor: Colors.extraLightGrey,
+    borderRadius: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    height: 44,
+    flex: 1
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.extraLightGrey,
+    height: 44,
+    width: 44,
+    borderRadius: 15,
+  },
+  micButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recordingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    padding: 8,
+  },
+  recordingIndicator: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    // backgroundColor: '#f0f0f0',
+    padding: 8,
+  },
+  recordingTime: {
+    marginHorizontal: 8,
+    fontWeight: 'bold',
+  },
+  recordingText: {
+    color: 'red',
+  },
 });

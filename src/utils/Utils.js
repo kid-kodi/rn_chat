@@ -169,6 +169,53 @@ export function debounce(func, delay = 500) {
   };
 }
 
+import { Platform } from 'react-native';
+
+/**
+ * Extracts filename from URI/file path
+ * Handles:
+ * - Regular filenames (file.txt)
+ * - Android content URIs (content://media/external/file/123)
+ * - iOS file URIs (file:///var/mobile/Containers/Data/.../Documents/file.m4a)
+ * - Network URIs (https://domain.com/path/file.jpg)
+ * - Encoded URIs (%20 for spaces)
+ * @param {string} uri - The file URI/path
+ * @returns {string} - The extracted filename with extension
+ */
+export const getFileNameFromUri = (uri) => {
+  if (!uri) return '';
+
+  // Handle Android Content URI (content://...)
+  if (uri.startsWith('content://')) {
+    const split = uri.split('/');
+    return decodeURIComponent(split[split.length - 1]);
+  }
+
+  // Remove query parameters if present (network URIs)
+  const cleanUri = uri.split('?')[0];
+
+  // Handle both encoded and regular URIs
+  try {
+    // Decode URI to handle special characters (%20, etc.)
+    const decodedUri = decodeURIComponent(cleanUri);
+    
+    // Extract the last part of the path
+    const filename = decodedUri.split('/').pop() || '';
+    
+    // Handle cases where the last part might be empty
+    if (!filename && Platform.OS === 'ios' && decodedUri.includes('file://')) {
+      // Special handling for iOS file URIs ending with /
+      const parts = decodedUri.replace('file://', '').split('/');
+      return parts[parts.length - 2] || 'unnamed';
+    }
+    
+    return filename || 'unnamed';
+  } catch (e) {
+    console.warn('Failed to decode URI:', e);
+    // Fallback for malformed URIs
+    return cleanUri.split('/').pop() || 'unnamed';
+  }
+};
 
 export function getFileTypeFromMimeType(mimeType) {
   if (!mimeType) return 'unknown';

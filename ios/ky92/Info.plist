@@ -34,15 +34,17 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Camera permission description</string>
+	<string>Allow access to your camera to take photos and videos within the app.</string>
 	<key>NSContactsUsageDescription</key>
-	<string>ContactsList needs your permission to access your contacts</string>
+	<string>Access your contacts to help you connect with friends or share content easily.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>This app needs access to documents folder to save recordings</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Use to acess location</string>
+	<string>We use your location to provide personalized services and nearby recommendations.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Microphone permission description</string>
+	<string>Allow microphone access to record audio in videos or during calls.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>We need access to your photos to let you share images</string>
+	<string>Access your photo library to upload, share, or save images and videos.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>AntDesign.ttf</string>

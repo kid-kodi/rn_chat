@@ -30,10 +30,14 @@ export default function ChatInput(props) {
     }
 
     // Start recording audio
-    const startRecording = async () => { }
+    const startRecording = async () => {
+        setIsRecording(true)
+    }
 
     // Stop recording audio
-    const stopRecording = async () => { }
+    const stopRecording = async () => {
+        setIsRecording(false);
+    }
 
     // Handle camera capture
     const handleCameraCapture = async () => { }
@@ -101,6 +105,8 @@ export default function ChatInput(props) {
                 </View>
             )}
 
+
+
             {/* Main Chat Input */}
             <View style={styles.inputContainer}>
                 <TouchableOpacity
@@ -124,28 +130,34 @@ export default function ChatInput(props) {
                     </TouchableOpacity>
                 ) : (
                     <>
-                        <TouchableOpacity
-                            style={styles.attachButton}
-                            onPressIn={startRecording}
-                            onPressOut={stopRecording}
-                        >
-                            <Icon name={isRecording ? "stop" : "microphone-outline"} size={24} color={isRecording ? "red" : "#075E54"} />
-                        </TouchableOpacity>
                         <TouchableOpacity style={styles.attachButton} onPress={takePhoto}>
                             <Icon name="camera-outline" size={24} color="#075E54" />
                         </TouchableOpacity>
+                        <View style={isRecording && { position: "absolute", left: 0, right: 0, bottom: 0, top: 0 }}>
+                            <View style={styles.recordingContainer}>
+                                {/* Recording Indicator */}
+                                {isRecording && (
+
+                                    <View style={styles.recordingIndicator}>
+                                        <Icon name="record" size={16} color="red" />
+                                        <Text style={styles.recordingTime}>{recordingTime}</Text>
+                                        <Text style={styles.recordingText}>Recording...</Text>
+                                    </View>
+                                )}
+                                <TouchableOpacity
+                                    style={styles.attachButton}
+                                    onPressIn={startRecording}
+                                    onPressOut={stopRecording}
+                                >
+                                    <Icon name={isRecording ? "stop" : "microphone-outline"} size={24} color={isRecording ? "red" : "#075E54"} />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
                     </>
                 )}
             </View>
 
-            {/* Recording Indicator */}
-            {isRecording && (
-                <View style={styles.recordingIndicator}>
-                    <Icon name="record" size={16} color="red" />
-                    <Text style={styles.recordingTime}>{recordingTime}</Text>
-                    <Text style={styles.recordingText}>Recording...</Text>
-                </View>
-            )}
+
         </View>
     )
 }
@@ -187,13 +199,18 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    recordingIndicator: {
+    recordingContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: '#ffffff',
         padding: 8,
-        borderTopWidth: 1,
-        borderTopColor: '#e0e0e0',
+    },
+    recordingIndicator: {
+        flex:1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        // backgroundColor: '#f0f0f0',
+        padding: 8,
     },
     recordingTime: {
         marginHorizontal: 8,
@@ -204,7 +221,7 @@ const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.1)',
         justifyContent: 'flex-end',
     },
     optionsContainer: {

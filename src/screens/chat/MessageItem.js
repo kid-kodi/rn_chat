@@ -273,8 +273,14 @@ export default function MessageItem(props) {
         sound.release();
       }
 
+      // const audioUri = cachedUri || `${BASE_API_URL}/image/${message.file?.name}`;
       const audioUri = cachedUri || `${BASE_API_URL}/image/${message.file?.name}`;
-      const newSound = new Sound(audioUri, '', (error) => {
+
+      console.log("###audioUri");
+      console.log(`${BASE_API_URL}/image/${message.file?.name}`);
+
+
+      const newSound = new Sound(audioUri, null, (error) => {
         if (error) {
           console.error('Sound loading error:', error);
           Alert.alert('Error', 'Could not load audio');
@@ -284,6 +290,8 @@ export default function MessageItem(props) {
         setDuration(newSound.getDuration());
         setSound(newSound);
 
+        newSound.setVolume(1);
+
         newSound.play((success) => {
           if (success) {
             setIsPlaying(false);
@@ -292,6 +300,12 @@ export default function MessageItem(props) {
             console.error('Sound playback failed');
           }
         });
+
+        // // Set system volume mode (Android specific)
+        // Sound.setCategory('Playback');
+
+        // Manually set volume (0-1)
+        
 
         setIsPlaying(true);
       });

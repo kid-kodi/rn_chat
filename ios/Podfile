@@ -46,6 +46,9 @@ target 'ky92' do
   )
 
   pod 'react-native-contacts', :path => '../node_modules/react-native-contacts'
+  # Add the RNAudioRecorderPlayer pod here, inside the target block
+  pod 'RNAudioRecorderPlayer', :path => '../node_modules/react-native-audio-recorder-player'
+
 
   target 'ky92Tests' do
     inherit! :complete
