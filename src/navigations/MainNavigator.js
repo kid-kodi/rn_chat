@@ -22,9 +22,6 @@ import NewChat from '../screens/chat/NewChat';
 import ManageUsers from '../screens/chat/ManageUsers';
 import NewGroup from '../screens/chat/NewGroup';
 import GroupInfoScreen from '../screens/chat/GroupInfoScreen';
-import DraggableVideoBubble from '../screens/call/VideoDraggable';
-import { useChat } from '../contexts/ChatProvider';
-import { navigate } from '../utils/RootNavigation';
 import MediaGallery from '../screens/mediaGallery/MediaGallery';
 import GalleryViewer from '../screens/mediaGallery/GalleryViewer';
 import TabScreen from '../screens/main/TabScreen';
@@ -33,8 +30,6 @@ import TabScreen from '../screens/main/TabScreen';
 const Stack = createStackNavigator();
 
 export default function MainNavigator() {
-
-  const { chat, showBubble, maximizeCall } = useChat();
 
   return (
     <View style={{ flex: 1 }}>
@@ -190,22 +185,6 @@ export default function MainNavigator() {
           </Stack.Group>
         </Stack.Navigator>
       </>
-      {/* Show floating bubble when call is active but minimized */}
-      {showBubble && (
-        <DraggableVideoBubble
-          videoComponent={<VideoComponent />}
-          onExpand={() => {
-            maximizeCall();
-            navigate("CALL", {
-              chatId: chat._id,
-              cameraStatus: false,
-              microphoneStatus: true,
-            })
-          }} // This now calls the navigation function in context
-          onClose={() => maximizeCall()}
-          onMinimize={() => { }} // Not needed since we're already minimized
-        />
-      )}
     </View>)
 }
 

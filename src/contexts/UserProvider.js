@@ -91,6 +91,16 @@ export default function UserProvider({ children }) {
     return response;
   };
 
+  const removeAccount = async () => {
+    // handleDisconnect("logout")
+    const response = await api.post('/api/auth/remove', {});
+    if (response.success) {
+      setUser(null);
+      AsyncStorage.clear();
+    }
+    return response;
+  };
+
   const update = async user_map => {
     const response = await api.put(`/api/users/${user._id}`, user_map, {
       'Content-Type':
@@ -124,6 +134,7 @@ export default function UserProvider({ children }) {
         setIsAuthenticated,
         isAuthenticated,
         logout,
+        removeAccount,
         update,
         searchUsers,
         updateProfile
