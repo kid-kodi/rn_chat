@@ -585,4 +585,86 @@ export const styles = StyleSheet.create({
   recordingText: {
     color: 'red',
   },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  modalView: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  optionButton: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  optionText: {
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  cancelText: {
+    color: '#007AFF',
+    fontWeight: 'bold',
+  },
+  deleteText: {
+    color: 'red',
+  },
+  // Selection mode styles
+  selectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: '#f8f8f8',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  // headerButton: {
+  //   color: '#007AFF',
+  //   fontSize: 16,
+  // },
+  disabledButton: {
+    color: '#ccc',
+  },
+  headerTitle: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  selectableContainer: {
+    paddingLeft: 40,
+  },
+  selectedContainer: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  checkbox: {
+    position: 'absolute',
+    left: 10,
+    top: '50%',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    transform: [{ translateY: -10 }],
+  },
+  checkboxSelected: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#007AFF',
+  },
 });

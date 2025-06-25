@@ -7,21 +7,15 @@ import {
   StyleSheet,
   Dimensions,
   Alert,
-  ActivityIndicator,
-  Modal,
-  Animated,
-  Pressable,
+  ActivityIndicator
 } from 'react-native';
-
-
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_API_URL } from '@env';
 import RNFS from 'react-native-fs';
 import Sound from 'react-native-sound';
 import CustomImageView from '../../components/CustomImage';
-import { formatChatDate, formatDate } from '../../utils/Utility';
-import { MeetingVariable } from '../../MeetingVariable';
+import { formatChatDate } from '../../utils/Utility';
 import FileViewer from 'react-native-file-viewer';
 import Video from 'react-native-video';
 
@@ -61,7 +55,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
   },
   ownMessage: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#D1FFBD',
     borderBottomRightRadius: 4,
     borderBottomLeftRadius: 16,
   },
@@ -71,7 +65,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   ownMessageText: {
-    color: '#FFF',
+    color: '#000',
   },
   mediaContainer: {
     backgroundColor: '#F0F0F0',
@@ -192,7 +186,74 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   ownTimestamp: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#999',
+  },
+  // Add these new styles:
+  replyContainer: {
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    padding: 8,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#888',
+    marginBottom: 8,
+  },
+  highlightedMessage: {
+    backgroundColor: '#FFF9C4',
+  },
+  replyText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  replySender: {
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  // Selection mode styles
+  selectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: '#f8f8f8',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  headerButton: {
+    color: '#007AFF',
+    fontSize: 16,
+  },
+  disabledButton: {
+    color: '#ccc',
+  },
+  headerTitle: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  selectableContainer: {
+    paddingLeft: 40,
+  },
+  selectedContainer: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  checkbox: {
+    position: 'absolute',
+    left: 10,
+    top: '50%',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    transform: [{ translateY: -10 }],
+  },
+  checkboxSelected: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#007AFF',
   },
 });
 
@@ -202,13 +263,12 @@ export default function MessageItem(props) {
   const message = props.message;
   const onPress = props.onPress;
   const onLongPress = props.onLongPress;
+  const onToggleSelect = props.onToggleSelect;
 
   const [isLoading, setIsLoading] = useState(false);
   const [cachedUri, setCachedUri] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [sound, setSound] = useState(null);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
 
   useEffect(() => {
     loadCachedContent();
@@ -222,6 +282,8 @@ export default function MessageItem(props) {
       }
     }
   }, [message._id]);
+
+
 
   const loadCachedContent = async () => {
     if (message.type === 'text') return;
@@ -300,13 +362,6 @@ export default function MessageItem(props) {
             console.error('Sound playback failed');
           }
         });
-
-        // // Set system volume mode (Android specific)
-        // Sound.setCategory('Playback');
-
-        // Manually set volume (0-1)
-        
-
         setIsPlaying(true);
       });
 
@@ -351,8 +406,51 @@ export default function MessageItem(props) {
     }
   };
 
+  // In your MessageItem component
+  const renderForwardedHeader = () => {
+    if (!message.isForwarded) return null;
+
+    return (
+      <Text style={styles.forwardedHeader}>
+        Forwarded from {message.originalSender} • {formatDate(message.originalTimestamp)}
+      </Text>
+    );
+  };
+
+  // Add this function to render the reply preview
+  const renderReplyPreview = () => {
+    if (!message.replyTo) return null;
+
+    // In a real app, you'd want to get the original message from your messages list
+    // For now, we'll assume it's passed in the replyTo object
+    const repliedMessage = message.replyTo.message;
+
+    return (
+      <TouchableOpacity
+        style={styles.replyContainer}
+        onPress={() => props.onReplyPress?.(repliedMessage)}
+        activeOpacity={0.7}>
+        <Text style={styles.replySender}>
+          Replying to {repliedMessage.sender?.fullName || 'user'}
+        </Text>
+        {repliedMessage.type === 'text' ? (
+          <Text style={styles.replyText} numberOfLines={2}>
+            {repliedMessage.content}
+          </Text>
+        ) : (
+          <Text style={styles.replyText} numberOfLines={1}>
+            [{repliedMessage.type} message]
+          </Text>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
   const renderTextMessage = () => (
-    <View style={[styles.textContainer, props.isOwn && styles.ownMessage]}>
+    <View style={[styles.textContainer, props.isOwn && styles.ownMessage,
+    message.bgColor && { backgroundColor: message.bgColor }]}>
+      {renderForwardedHeader()}
+      {renderReplyPreview()}
       <Text style={[styles.messageText, props.isOwn && styles.ownMessageText]}>
         {message.content}
       </Text>
@@ -361,7 +459,11 @@ export default function MessageItem(props) {
   );
 
   const renderImageMessage = () => (
-    <View style={[styles.mediaContainer, props.isOwn && styles.ownMessage]}>
+    <View style={[styles.mediaContainer, props.isOwn && styles.ownMessage,
+    message.bgColor && { backgroundColor: message.bgColor }
+    ]}>
+      {renderForwardedHeader()}
+      {renderReplyPreview()}
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
@@ -385,7 +487,11 @@ export default function MessageItem(props) {
   );
 
   const renderVideoMessage = () => (
-    <View style={[styles.mediaContainer, props.isOwn && styles.ownMessage]}>
+    <View style={[styles.mediaContainer, props.isOwn && styles.ownMessage,
+    message.bgColor && { backgroundColor: message.bgColor }
+    ]}>
+      {renderForwardedHeader()}
+      {renderReplyPreview()}
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
@@ -414,7 +520,11 @@ export default function MessageItem(props) {
   );
 
   const renderAudioMessage = () => (
-    <View style={[styles.audioContainer, props.isOwn && styles.ownMessage]}>
+    <View style={[styles.audioContainer, props.isOwn && styles.ownMessage,
+    message.bgColor && { backgroundColor: message.bgColor }
+    ]}>
+      {renderForwardedHeader()}
+      {renderReplyPreview()}
       <TouchableOpacity
         style={styles.audioButton}
         onPress={isPlaying ? pauseAudio : (sound ? resumeAudio : playAudio)}
@@ -437,9 +547,13 @@ export default function MessageItem(props) {
 
   const renderDocumentMessage = () => (
     <TouchableOpacity
-      style={[styles.documentContainer, props.isOwn && styles.ownMessage]}
+      style={[styles.documentContainer, props.isOwn && styles.ownMessage,
+      message.bgColor && { backgroundColor: message.bgColor }
+      ]}
       onPress={() => openFile?.()}
     >
+      {renderForwardedHeader()}
+      {renderReplyPreview()}
       <View style={styles.documentIcon}>
         <Text style={styles.documentIconText}>📄</Text>
       </View>
@@ -480,8 +594,16 @@ export default function MessageItem(props) {
 
   return (
     <>
+      <View style={[styles.container, props.isOwn && styles.ownContainer,
+      props.isSelectMode && styles.selectableContainer,
+      props.isSelected && styles.selectedContainer]}>
 
-      <View style={[styles.container, props.isOwn && styles.ownContainer]}>
+        {props.isSelectMode && (
+          <View style={styles.checkbox}>
+            {props.isSelected && <View style={styles.checkboxSelected} />}
+          </View>
+        )}
+
         {!props.isOwn && (
           <CustomImageView
             source={`${BASE_API_URL}/image/${message.sender?.profilePicture}`}
@@ -496,37 +618,14 @@ export default function MessageItem(props) {
             <Text style={styles.senderName}>{message.sender?.fullName}</Text>
           )}
           <TouchableOpacity
-            onPress={() => onPress?.(message)}
-            onLongPress={() => onLongPress?.(message)}
+            onPress={() => props.isSelectMode ? onToggleSelect?.(message) : onPress?.(message)}
+            onLongPress={() => props.isSelectMode ? onToggleSelect?.(message) : onLongPress?.(message)}
             activeOpacity={0.8}
           >
             {renderContent()}
           </TouchableOpacity>
         </View>
       </View>
-      <Modal
-        transparent
-        visible={props.actionMenuVisible}
-        onRequestClose={props.closeActionMenu}
-        animationType="none"
-      >
-        <Pressable style={styles.modalOverlay} onPress={props.closeActionMenu}>
-          <Animated.View style={[styles.actionMenu, { opacity: props.fadeAnim }]}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => props.handleAction('copy')}
-            >
-              <Text style={styles.actionText}>Copier</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.deleteButton]}
-              onPress={() => props.handleAction('delete')}
-            >
-              <Text style={[styles.actionText, styles.deleteText]}>Supprimer</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </Pressable>
-      </Modal>
     </>
   );
 }

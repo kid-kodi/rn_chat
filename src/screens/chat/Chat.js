@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { SafeAreaView, FlatList, View, KeyboardAvoidingView, Platform, Keyboard, Modal, Alert, Animated, Pressable, Linking, ActionSheetIOS, PermissionsAndroid } from 'react-native'
+import { SafeAreaView, FlatList, View, KeyboardAvoidingView, Platform, Keyboard, Modal, Alert, Animated, Linking, PermissionsAndroid } from 'react-native'
 import { useUser } from '../../contexts/UserProvider';
 import { Image } from 'react-native';
 import { Text } from 'react-native';
@@ -24,15 +24,27 @@ import MessageBubble from './MessageItem';
 import ChatHeader from './ChatHeader';
 import { TypingIndicator } from '../../components/TypingIndicator';
 
-import AudioRecorderPlayer, { AudioEncoderAndroidType, AudioSourceAndroidType, AVEncoderAudioQualityIOSType, AVEncodingOption, AVModeIOSOption, OutputFormatAndroidType } from 'react-native-audio-recorder-player';
+import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 
-import RNFS, { DocumentDirectoryPath, mkdir } from 'react-native-fs';
+import RNFS from 'react-native-fs';
+import ReplyTo from './ReplyTo';
+import ForwardModal from './ForwardModal';
 
 const MESSAGES_PER_PAGE = 50;
 const maxDuration = 300; // 5 minutes in seconds
 const minDuration = 1; // minimum 1 second
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
+
+const options = [
+  'Reply',
+  'Forward',
+  'Copy',
+  'Delete',
+  'Share',
+  'Info',
+  'Cancel'
+];
 
 export default function Chat({ route }) {
 
@@ -56,31 +68,33 @@ export default function Chat({ route }) {
   const [messageType, setMessageType] = useState('text');
   const [replyingTo, setReplyingTo] = useState();
   const [isTyping, setIsTyping] = useState(false); // To track if the current user is typing
-  // const [image, setImage] = useState();
-  const [tempImageUri, setTempImageUri] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+
   const [file, setFile] = useState();
   const [isRecording, setIsRecording] = useState(false);
   const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
   const [mediaItems, setMediaItems] = useState([]);
   // const [messages, setMessages] = useState([]);
   const [mediaPreview, setMediaPreview] = useState(null);
-  const [selectedMediaView, setSelectedMediaView] = useState(null);
 
+  const [modalVisible, setModalVisible] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
-  const [actionMenuVisible, setActionMenuVisible] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  const [isCallLoading, setIsCallLoading] = useState(false);
-
-  // Add these state variables for audio recording
-  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
-  const [audioMessage, setAudioMessage] = useState(null);
   // const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState('00:00');
   const [recordingPath, setRecordingPath] = useState(null);
   const [duration, setDuration] = useState('00:00');
   const [hasPermission, setHasPermission] = useState(false);
+
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedMessages, setSelectedMessages] = useState([]);
+  const [forwardModalVisible, setForwardModalVisible] = useState(false);
+
+  // Sample contacts data - replace with your actual contacts
+  const [contacts, setContacts] = useState([
+    { id: '1', name: 'John Doe' },
+    { id: '2', name: 'Jane Smith' },
+    { id: '3', name: 'Mike Johnson' },
+    // Add more contacts as needed
+  ]);
 
   const recordingRef = useRef(null);
   const durationTimerRef = useRef(null);
@@ -242,111 +256,6 @@ export default function Chat({ route }) {
     }
     // notify user that a new converation created
   };
-
-
-  // const openFile = async (item) => {
-  //   try {
-  //     console.log(item.name);
-  //     const filePath = `${MeetingVariable.fileService.getBundlePath()}/${item.name}`;
-
-  //     console.log("####filePath")
-  //     console.log(filePath)
-
-  //     // First check if file exists
-  //     const exists = await MeetingVariable.fileService.fileExists(filePath);
-
-  //     console.log(exists)
-
-  //     if (!exists) {
-  //       // File doesn't exist, download it first
-  //       await downloadFile(item); // Pass the item/message to download
-  //     }
-
-  //     // Now open the file
-  //     FileViewer.open(filePath)
-  //       .then(() => {
-  //         console.log('File opened successfully');
-  //       })
-  //       .catch((error) => {
-  //         console.error('Error opening file:', error);
-  //       });
-
-  //   } catch (error) {
-  //     console.error('Error in openFile process:', error);
-  //   }
-  // };
-
-  // Modified downloadFile to work with both messages and items
-  // const downloadFile = async (item) => {
-  //   try {
-  //     // Handle both message objects and direct file items
-  //     const fileName = item.name;
-  //     const filePath = `${MeetingVariable.fileService.getBundlePath()}/${fileName}`;
-  //     const downloadUrl = `${BASE_API_URL}/image/${fileName}`;
-
-  //     // If it's a message object, update its status
-  //     if (item._id) {
-  //       item.fileJobStatus = FileJobStatus.progressing;
-  //       setMessages(prev =>
-  //         prev.map(msg =>
-  //           msg._id === item._id ? { ...item } : msg
-  //         )
-  //       );
-  //     }
-
-  //     await MeetingVariable.fileService.download(
-  //       downloadUrl,
-  //       filePath,
-  //       (bytesSent, totalBytes) => {
-  //         if (item._id) {
-  //           setMessages(prev =>
-  //             prev.map(msg =>
-  //               msg._id === item._id
-  //                 ? { ...msg, bytesSent, totalBytes }
-  //                 : msg
-  //             )
-  //           );
-  //         }
-  //       },
-  //       (status) => {
-  //         if (item._id) {
-  //           setMessages(prev =>
-  //             prev.map(msg =>
-  //               msg._id === item._id
-  //                 ? { ...msg, fileJobStatus: status }
-  //                 : msg
-  //             )
-  //           );
-  //         }
-  //       }
-  //     );
-
-  //     if (item._id) {
-  //       setMessages(prev =>
-  //         prev.map(msg =>
-  //           msg._id === item._id
-  //             ? { ...msg, filePath, fileJobStatus: FileJobStatus.completed }
-  //             : msg
-  //         )
-  //       );
-  //     }
-
-  //     return filePath; // Return the path for the openFile function to use
-
-  //   } catch (err) {
-  //     if (item._id) {
-  //       setMessages(prev =>
-  //         prev.map(msg =>
-  //           msg._id === item._id
-  //             ? { ...msg, fileJobStatus: FileJobStatus.failed }
-  //             : msg
-  //         )
-  //       );
-  //     }
-  //     console.error('[Error] Failed to download file:', err);
-  //     throw err; // Re-throw the error so openFile can handle it
-  //   }
-  // };
 
   const cancelMediaPreview = () => {
     setMediaPreview(null);
@@ -558,126 +467,51 @@ export default function Chat({ route }) {
 
   // Handle message long press
   const handleMessageLongPress = (message) => {
-    const options = [
-      'Reply',
-      'Forward',
-      'Copy',
-      'Delete',
-      'Share',
-      'Info',
-      'Cancel'
-    ];
+    setSelectedMessage(message);
+    setModalVisible(true);
+  };
 
-    const cancelButtonIndex = options.length - 1;
-    const destructiveButtonIndex = 3; // Delete option
+  const handleForward = (message) => {
+    setSelectedMessage(null);
+    setModalVisible(false);
 
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options,
-          cancelButtonIndex,
-          destructiveButtonIndex,
-          title: 'Message Options',
-        },
-        (buttonIndex) => {
-          handleActionSheetPress(buttonIndex, message);
-        }
-      );
-    } else {
-      // For Android, you can use a custom action sheet or modal
-      Alert.alert(
-        'Message Options',
-        'What would you like to do with this message?',
-        [
-          { text: 'Reply', onPress: () => handleActionSheetPress(0, message) },
-          { text: 'Forward', onPress: () => handleActionSheetPress(1, message) },
-          { text: 'Copy', onPress: () => handleActionSheetPress(2, message) },
-          { text: 'Delete', onPress: () => handleActionSheetPress(3, message), style: 'destructive' },
-          { text: 'Share', onPress: () => handleActionSheetPress(4, message) },
-          { text: 'Info', onPress: () => handleActionSheetPress(5, message) },
+    toggleSelectMode(true);
+    toggleMessageSelect(message);
+  }
+
+  const handleOptionPress = (option) => {
+    setModalVisible(false);
+
+    switch (option) {
+      case 'Reply':
+        setReplyingTo(selectedMessage);
+        break;
+      case 'Forward':
+        handleForward(selectedMessage);
+        break;
+      case 'Copy':
+        Clipboard.setString(selectedMessage);
+        Alert.alert('Copied', 'Message copied to clipboard');
+        break;
+      case 'Delete':
+        Alert.alert('Delete', `Are you sure you want to delete this message?`, [
           { text: 'Cancel', style: 'cancel' },
-        ]
-      );
-    }
-  };
-
-  // Handle action sheet button press
-  const handleActionSheetPress = async (buttonIndex, message) => {
-    switch (buttonIndex) {
-      case 0: // Reply
-        // console.log('Reply to message:', message.id);
-        // Example: setReplyingTo(message);
-        Alert.alert('Reply', `Replying to: "${message.text || message.fileName || 'Media'}"`);
+          { text: 'Delete', style: 'destructive', onPress: () => console.log('Message deleted') }
+        ]);
         break;
-
-      case 1: // Forward
-        // console.log('Forward message:', message.id);
-        // Example: navigation.navigate('ForwardMessage', { message });
-        Alert.alert('Forward', 'Message will be forwarded');
+      case 'Share':
+        Alert.alert('Share', `Sharing: ${selectedMessage}`);
         break;
-
-      case 2: // Copy
-        if (message.type === 'text') {
-          // Copy text to clipboard
-          import('@react-native-clipboard/clipboard').then(({ default: Clipboard }) => {
-            Clipboard.setString(message.text);
-            Alert.alert('Copied', 'Text copied to clipboard');
-          });
-        } else {
-          Alert.alert('Copy', 'Media/Document link copied');
-        }
+      case 'Info':
+        Alert.alert('Info', `Message info: ${selectedMessage}`);
         break;
-
-      case 3: // Delete
-        Alert.alert(
-          'Delete Message',
-          'Are you sure you want to delete this message?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Delete',
-              style: 'destructive',
-              onPress: () => {
-                console.log('Delete message:', message.id);
-                // Example: deleteMessage(message.id);
-                Alert.alert('Deleted', 'Message deleted');
-              }
-            },
-          ]
-        );
+      case 'Cancel':
+        // Just close the modal
         break;
-
-      case 4: // Share
-        try {
-          const shareContent = {
-            message: message.type === 'text' ? message.text : message.fileName || 'Shared content',
-            url: message.uri || undefined,
-          };
-
-          await Share.share(shareContent);
-        } catch (error) {
-          console.error('Share error:', error);
-        }
-        break;
-
-      case 5: // Info
-        const infoText = `
-          Message ID: ${message.id}
-          Type: ${message.type}
-          Time: ${message.timestamp}
-          ${message.isOwn ? 'Sent by: You' : `Sent by: ${message.senderName || 'Unknown'}`}
-          ${message.fileSize ? `Size: ${message.fileSize}` : ''}
-                  `.trim();
-
-        Alert.alert('Message Info', infoText);
-        break;
-
       default:
-        // Cancel or unknown
         break;
     }
   };
-
 
 
   const renderMessage = ({ item }) => {
@@ -695,76 +529,15 @@ export default function Chat({ route }) {
             user={user}
             onPress={handleMessagePress}
             onLongPress={handleMessageLongPress}
-            actionMenuVisible={actionMenuVisible}
-            closeActionMenu={closeActionMenu}
-            fadeAnim={fadeAnim}
-            handleAction={handleAction}
+            onReplyPress={handleReplyPress}
+            isSelectMode={isSelectMode}
+            isSelected={selectedMessages.some(m => m._id === item._id)}
+            onToggleSelect={toggleMessageSelect}
           />
         </View>
       </View>
     );
   }
-
-
-  // const handleMessageLongPress = (message) => {
-  //   setSelectedMessage(message);
-
-  //   // Fade in animation
-  //   Animated.timing(fadeAnim, {
-  //     toValue: 1,
-  //     duration: 200,
-  //     useNativeDriver: true,
-  //   }).start();
-
-  //   setActionMenuVisible(true);
-  // };
-
-  const closeActionMenu = () => {
-    // Fade out animation
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      setActionMenuVisible(false);
-      setSelectedMessage(null);
-    });
-  };
-
-  const handleAction = async (action) => {
-
-    // Perform the action here
-    switch (action) {
-      case 'delete':
-        const response = await api.delete(`/api/messages/${selectedMessage._id}`);
-        console.log("######response")
-        console.log(response)
-
-        if (response.success) {
-          setMessages(messages.filter(msg => msg._id !== selectedMessage._id));
-        }
-        break;
-      case 'reply':
-        // Implement reply logic
-        setReplyingTo(selectedMessage)
-        break;
-      case 'react':
-        // Implement reaction logic
-        break;
-      case 'copy':
-        // Implement copy to clipboard
-        try {
-          Clipboard.setString(selectedMessage.content);
-        } catch (error) {
-          console.log(error);
-        }
-        break;
-      default:
-        break;
-    }
-
-    closeActionMenu();
-  };
 
   const renderMediaPreview = () => {
     if (!mediaPreview) return null;
@@ -854,18 +627,8 @@ export default function Chat({ route }) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const generateFileName = () => {
-    const timestamp = new Date().getTime();
-    const fileName = `audio_${timestamp}.m4a`;
-    return Platform.OS === 'ios'
-      ? `${RNFS.DocumentDirectoryPath}/recording.m4a`
-      : `${RNFS.ExternalDirectoryPath}/sdcard/recording.mp3`;
-  };
-
   // Start recording audio
   const startRecording = async () => {
-
-
     if (!hasPermission) {
       await checkPermissions();
       return;
@@ -880,11 +643,6 @@ export default function Chat({ route }) {
       audioRecorderPlayer.addRecordBackListener((e) => {
         const seconds = Math.floor(e.currentPosition / 1000);
         setRecordingTime(formatTime(seconds));
-
-        // Generate simple waveform data
-        // const amplitude = Math.random() * 50 + 10;
-        // setWaveformData(prev => [...prev.slice(-50), amplitude]);
-
         // Auto-stop at max duration
         if (seconds >= maxDuration) {
           stopRecording();
@@ -987,56 +745,6 @@ export default function Chat({ route }) {
       roomId: chat?._id,
       userId: user?._id
     });
-  };
-
-  const handleSendAudioMessage = async (audioData) => {
-    if (!chat || !socket) return;
-
-    try {
-      const messageData = {
-        chat: chat._id,
-        sender: user,
-        content: "",
-        type: "audio",
-        createdAt: new Date().toISOString(),
-        file: audioData,
-        fileJobType: FileJobType.upload,
-        duration: audioData.duration,
-        fileJobStatus: FileJobStatus.progressing,
-        replyTo: replyingTo && {
-          message: replyingTo._id,
-          user: replyingTo.sender._id,
-        },
-      };
-
-      // Optimistically add message to UI
-      const tempMessage = {
-        ...messageData,
-        _id: `temp-${Date.now()}`,
-        sending: true,
-      };
-
-      setMessages(prev => [tempMessage, ...prev]);
-      setAudioMessage(null);
-
-      // send to server
-      const response = await api.post(`/api/messages`, messageData);
-
-      // Replace temp message with saved message
-      setMessages(prev =>
-        prev.map(msg =>
-          msg._id === tempMessage._id ? response.data : msg
-        )
-      );
-
-      socket.emit('send_message', {
-        chatId: chat._id,
-        senderId: user._id,
-        message: response.data,
-      });
-    } catch (error) {
-      console.error('Audio message failed to send', error);
-    }
   };
 
   const handleSendMessage = async () => {
@@ -1312,10 +1020,94 @@ export default function Chat({ route }) {
     return null;
   };
 
+  // Function to handle reply press and scroll to message
+  const handleReplyPress = (repliedMessage) => {
+    const index = messages.findIndex(msg => msg._id === repliedMessage._id);
+    if (index !== -1 && flatListRef.current) {
+      flatListRef.current.scrollToIndex({
+        index,
+        animated: true,
+        viewPosition: 0.5, // Scroll to center of screen
+      });
+
+      // Optional: Highlight the message briefly
+      const originalBgColor = messages[index].bgColor;
+      setMessages(prev => {
+        const newMessages = [...prev];
+        newMessages[index] = {
+          ...newMessages[index],
+          bgColor: '#FFF9C4' // Highlight color
+        };
+        return newMessages;
+      });
+
+      // Reset the highlight after 2 seconds
+      setTimeout(() => {
+        setMessages(prev => {
+          const newMessages = [...prev];
+          newMessages[index] = {
+            ...newMessages[index],
+            bgColor: originalBgColor
+          };
+          return newMessages;
+        });
+      }, 2000);
+    }
+  };
+
+  // Toggle selection mode
+  const toggleSelectMode = () => {
+    setIsSelectMode(!isSelectMode);
+    if (isSelectMode) {
+      setSelectedMessages([]); // Clear selection when exiting
+    }
+  };
+
+  // Toggle individual message selection
+  const toggleMessageSelect = (message) => {
+    setSelectedMessages(prev =>
+      prev.some(m => m._id === message._id)
+        ? prev.filter(m => m._id !== message._id)
+        : [...prev, message]
+    );
+  };
+
+  // Handle forwarding selected messages
+  const handleForwardSelected = (contactIds) => {
+    selectedMessages.forEach(message => {
+      // Your forwarding logic for each message
+      console.log('Forwarding message:', message._id, 'to contacts:', contactIds);
+    });
+    setForwardModalVisible(false);
+    setIsSelectMode(false);
+    setSelectedMessages([]);
+  };
+
+  const SelectionBar = () => (
+    <View style={styles.selectionHeader}>
+      <TouchableOpacity onPress={() => selectedMessages.length > 0 && setForwardModalVisible(true)}>
+        <Ionicons name='arrow-redo-outline' size={24} />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>
+        {selectedMessages.length} Selectionnes
+      </Text>
+      <TouchableOpacity
+        onPress={() => selectedMessages.length > 0 && setForwardModalVisible(true)}
+        disabled={selectedMessages.length === 0}
+      >
+        <Ionicons name='share-outline' size={24} />
+      </TouchableOpacity>
+    </View>
+  );
+
 
   return (
     <SafeAreaView style={styles.container}>
-      <ChatHeader chat={chat} chatInfo={chatInfo} />
+      <ChatHeader
+        setIsSelectMode={setIsSelectMode}
+        isSelectMode={isSelectMode}
+        chat={chat}
+        chatInfo={chatInfo} />
       {
         !chat &&
         <View style={styles.newChatContainer}>
@@ -1329,6 +1121,8 @@ export default function Chat({ route }) {
           </View>
         </View>
       }
+
+
 
       {
         chat &&
@@ -1348,6 +1142,16 @@ export default function Chat({ route }) {
               autoscrollToTopThreshold: 10,
             }}
             contentContainerStyle={styles.messagesList}
+            onScrollToIndexFailed={(info) => {
+              // Fallback for when scrollToIndex fails
+              const wait = new Promise(resolve => setTimeout(resolve, 500));
+              wait.then(() => {
+                flatListRef.current?.scrollToIndex({
+                  index: info.index,
+                  animated: true,
+                });
+              });
+            }}
           />
 
 
@@ -1355,78 +1159,132 @@ export default function Chat({ route }) {
             isTyping && <TypingIndicator isVisible={isTyping} />
           }
 
+          {
+            replyingTo &&
+            <ReplyTo
+              onCancel={() => {
+                setReplyingTo(null);
+                setSelectedMessage(null)
+                setMessageType("text");
+              }}
+              message={selectedMessage}
+            />
 
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          >
+          }
 
-            {mediaPreview && renderMediaPreview()}
-
-
-            <View style={styles.inputContainer}>
-              <TouchableOpacity
-                style={styles.attachButton}
-                onPress={handleAttachmentPress}
-              >
-                <Ionicons name="add-circle-outline" size={24} color="#333" />
-              </TouchableOpacity>
-
-              <View style={styles.textInputContainer}>
-                <TextInput
-                  style={styles.input}
-                  value={messageText}
-                  onChangeText={handleOnMessageChange}
-                  placeholder="Taper un message..."
-                  multiline
-                  maxHeight={100}
-                  editable={!isRecording}
-                />
-              </View>
+          {
+            isSelectMode && <SelectionBar />
+          }
 
 
-              {messageText.trim() !== '' || mediaPreview ? (
+          {!isSelectMode &&
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+
+              {mediaPreview && renderMediaPreview()}
+
+
+              <View style={styles.inputContainer}>
                 <TouchableOpacity
-                  style={styles.sendButton}
-                  onPress={handleSendMessage}
+                  style={styles.attachButton}
+                  onPress={handleAttachmentPress}
                 >
-                  <Ionicons name="send" size={24} color="#333" />
+                  <Ionicons name="add-circle-outline" size={24} color="#333" />
                 </TouchableOpacity>
-              ) : (
-                <>
+
+                <View style={styles.textInputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    value={messageText}
+                    onChangeText={handleOnMessageChange}
+                    placeholder="Taper un message..."
+                    multiline
+                    maxHeight={100}
+                    editable={!isRecording}
+                  />
+                </View>
+
+
+                {messageText.trim() !== '' || mediaPreview ? (
                   <TouchableOpacity
-                    style={styles.micButton}
-                    onPress={takePhoto}
+                    style={styles.sendButton}
+                    onPress={handleSendMessage}
                   >
-                    <Ionicons name="camera-outline" size={24} color="#333" />
+                    <Ionicons name="send" size={24} color="#333" />
                   </TouchableOpacity>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={styles.micButton}
+                      onPress={takePhoto}
+                    >
+                      <Ionicons name="camera-outline" size={24} color="#333" />
+                    </TouchableOpacity>
 
-                  <View style={isRecording && { position: "absolute", left: 0, right: 0, bottom: 0, top: 0 }}>
-                    <View style={styles.recordingContainer}>
-                      {/* Recording Indicator */}
-                      {isRecording && (
+                    <View style={isRecording && { position: "absolute", left: 0, right: 0, bottom: 0, top: 0 }}>
+                      <View style={styles.recordingContainer}>
+                        {/* Recording Indicator */}
+                        {isRecording && (
 
-                        <View style={styles.recordingIndicator}>
-                          <Ionicons name="recording-outline" size={16} color="red" />
-                          <Text style={styles.recordingTime}>{recordingTime}</Text>
-                          <Text style={styles.recordingText}>Recording...</Text>
-                        </View>
-                      )}
-                      <TouchableOpacity
-                        style={styles.attachButton}
-                        onPressIn={startRecording}
-                        onPressOut={stopRecording}
-                      >
-                        <Ionicons name={isRecording ? "stop" : "mic-outline"} size={24} color={isRecording ? "red" : "#075E54"} />
-                      </TouchableOpacity>
+                          <View style={styles.recordingIndicator}>
+                            <Ionicons name="recording-outline" size={16} color="red" />
+                            <Text style={styles.recordingTime}>{recordingTime}</Text>
+                            <Text style={styles.recordingText}>Recording...</Text>
+                          </View>
+                        )}
+                        <TouchableOpacity
+                          style={styles.attachButton}
+                          onPressIn={startRecording}
+                          onPressOut={stopRecording}
+                        >
+                          <Ionicons name={isRecording ? "stop" : "mic-outline"} size={24} color={isRecording ? "red" : "#075E54"} />
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  </View>
-                </>
-              )}
-            </View>
-            {showAttachmentOptions && renderAttachmentOptions()}
-          </KeyboardAvoidingView>
+                  </>
+                )}
+              </View>
+              {showAttachmentOptions && renderAttachmentOptions()}
+            </KeyboardAvoidingView>
+          }
         </>
       }
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalView}>
+            {options.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.optionButton}
+                onPress={() => handleOptionPress(option)}
+              >
+                <Text style={[
+                  styles.optionText,
+                  option === 'Cancel' && styles.cancelText,
+                  option === 'Delete' && styles.deleteText
+                ]}>
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Modal>
+
+      <ForwardModal
+        visible={forwardModalVisible}
+        onClose={() => setForwardModalVisible(false)}
+        messages={selectedMessages}
+        contacts={contacts}
+        onForward={handleForwardSelected}
+      />
+
     </SafeAreaView >
   )
 }
