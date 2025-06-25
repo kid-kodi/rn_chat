@@ -11,7 +11,7 @@ import uuid from 'react-native-uuid';
 import { useUser } from '../../contexts/UserProvider';
 import { useApi } from '../../contexts/ApiProvider';
 
-export default function ChatHeader({ chatInfo, chat }) {
+export default function ChatHeader({ chatInfo, chat, isSelectMode, setIsSelectMode }) {
 
   const { user } = useUser();
   const api = useApi();
@@ -81,7 +81,7 @@ export default function ChatHeader({ chatInfo, chat }) {
     const callData = {
       chatId: chat._id,
       callId,
-      callType : data.cameraStatus ? "video" : "audio",
+      callType: data.cameraStatus ? "video" : "audio",
       caller: user,
     };
 
@@ -97,15 +97,21 @@ export default function ChatHeader({ chatInfo, chat }) {
     return false;
   };
 
+  const toggleSelectMode = () => {
+    setIsSelectMode(false);
+  }
 
   return (
     <View style={styles.header}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => navigate(`TAB`)}
-      >
-        <Ionicons name="arrow-back" size={24} color="#333333" />
-      </TouchableOpacity>
+      {
+        !isSelectMode &&
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigate(`TAB`)}
+        >
+          <Ionicons name="arrow-back" size={24} color="#333333" />
+        </TouchableOpacity>
+      }
 
       <TouchableOpacity
         style={styles.contactInfo}
@@ -129,37 +135,51 @@ export default function ChatHeader({ chatInfo, chat }) {
         </View>
       </TouchableOpacity>
 
-      <View style={styles.headerActions}>
-        {!chat?.ongoingCall && <>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleAudioCall}
-          >
-            <Ionicons name="call-outline" size={22} color="#333" />
-          </TouchableOpacity>
+      {
+        !isSelectMode && <View style={styles.headerActions}>
+          {
+            !chat?.ongoingCall && <>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={handleAudioCall}
+              >
+                <Ionicons name="call-outline" size={22} color="#333" />
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleVideoCall}
-          >
-            <Ionicons name="videocam-outline" size={22} color="#333" />
-          </TouchableOpacity>
-        </>}
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={handleVideoCall}
+              >
+                <Ionicons name="videocam-outline" size={22} color="#333" />
+              </TouchableOpacity>
+            </>
+          }
 
-        {chat?.ongoingCall &&
-          <TouchableOpacity style={[
-            styles.headerButton,
-            styles.joinButton]}
-            onPress={() => {
-              joinCall({
-                chatId: chat?._id,
-                cameraStatus: false,
-                microphoneStatus: true,
-              });
-            }}>
-            <Text style={styles.joinButtonText}>Rejoindre</Text>
-          </TouchableOpacity>}
-      </View>
+          {
+            chat?.ongoingCall &&
+            <TouchableOpacity style={[
+              styles.headerButton,
+              styles.joinButton]}
+              onPress={() => {
+                joinCall({
+                  chatId: chat?._id,
+                  cameraStatus: false,
+                  microphoneStatus: true,
+                });
+              }}>
+              <Text style={styles.joinButtonText}>Rejoindre</Text>
+            </TouchableOpacity>
+          }
+        </View>
+      }
+
+      {
+        isSelectMode && <View style={styles.headerActions}>
+          <TouchableOpacity onPress={toggleSelectMode}>
+            <Text style={styles.headerButton}>Annuler</Text>
+          </TouchableOpacity>
+        </View>
+      }
     </View>
   )
 }
