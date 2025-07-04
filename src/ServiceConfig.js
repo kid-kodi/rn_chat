@@ -4,7 +4,7 @@ const config = {
   // serverIp:  "api.solisalim.com",
   serverIp:  SERVER_IP,
   serverPort: 5000,
-  serverUseHttps: false,
+  serverUseHttps: true,   
 };
 
 export const iflytekAPPID = 'YourAPPID';

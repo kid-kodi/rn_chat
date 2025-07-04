@@ -16,9 +16,10 @@ import { TextButton } from '../../components/MyButton';
 import axiosInstance from '../../utils/AxiosInstance';
 import { goBack } from '../../utils/RootNavigation';
 import { useUser } from '../../contexts/UserProvider';
+import { useKeepAwake } from '@sayem314/react-native-keep-awake';
 
 export default function MeetingPage({ navigation, route }) {
-
+  useKeepAwake();
   const { cameraStatus, microphoneStatus, chatId } = route.params;
 
   const {user} = useUser();
