@@ -27,7 +27,7 @@ export default function ChatHeader({ chatInfo, chat, isSelectMode, setIsSelectMo
       // Generate a unique call ID
       const callId = uuid.v4();
 
-      // Prepare call data
+      // // Prepare call data
       const callData = {
         chatId: chat._id,
         callId,
@@ -35,22 +35,23 @@ export default function ChatHeader({ chatInfo, chat, isSelectMode, setIsSelectMo
         caller: user,
       };
 
+      // ****** should be implemented on the server side //
       // Call the backend API to initiate call
-      const response = await api.post(`/api/call/initiate-call`, callData);
+      // const response = await api.post(`/api/call/initiate-call`, callData);
       // setChat(response.chat);
 
-      MeetingVariable.callService.setup();
+      // MeetingVariable.callService.setup(); kouamemorisgue@gmail.com
 
-      const callUUID = MeetingVariable.callService.startCall(
-        callId, chat._id, chatInfo.name, chatInfo.isGroupChat, callData.callType === "video");
+      // const callUUID = MeetingVariable.callService.startCall(
+      //   callId, chat._id, chatInfo.name, chatInfo.isGroupChat, callData.callType === "video");
 
       // Navigate to call screen
       navigate('CALL', {
-        callUUID,
         chatId: callData.chatId,
         cameraStatus: callData.callType === "video",
         microphoneStatus: false,
       });
+
     } catch (error) {
       console.error('Failed to initiate call:', error);
     } finally {
@@ -74,22 +75,8 @@ export default function ChatHeader({ chatInfo, chat, isSelectMode, setIsSelectMo
 
 
   const joinCall = async data => {
-    // Generate a unique call ID
-    const callId = uuid.v4();
-
-    // Prepare call data
-    const callData = {
-      chatId: chat._id,
-      callId,
-      callType: data.cameraStatus ? "video" : "audio",
-      caller: user,
-    };
-
-    const callUUID = MeetingVariable.callService.startCall(
-      callId, chat._id, chatInfo.name, chatInfo.isGroupChat, callData.callType === "video");
-
+    
     navigate('CALL', {
-      callUUID,
       chatId: data.chatId,
       cameraStatus: data.cameraStatus,
       microphoneStatus: data.microphoneStatus,
@@ -164,7 +151,7 @@ export default function ChatHeader({ chatInfo, chat, isSelectMode, setIsSelectMo
                 joinCall({
                   chatId: chat?._id,
                   cameraStatus: false,
-                  microphoneStatus: true,
+                  microphoneStatus: false,
                 });
               }}>
               <Text style={styles.joinButtonText}>Rejoindre</Text>

@@ -1,23 +1,25 @@
-import {useEffect, useState} from 'react';
-import {Modal, StyleSheet, TouchableOpacity, View} from 'react-native';
-import {MeetingVariable} from '../../MeetingVariable';
-import {IconWithLabel} from '../../components/IconWithLabel';
-import {HostMenu, ParticipantsMenu} from '../../components/ParticipantsMenu';
+import { useEffect, useState } from 'react';
+import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { MeetingVariable } from '../../MeetingVariable';
+import { IconWithLabel } from '../../components/IconWithLabel';
+import { HostMenu, ParticipantsMenu } from '../../components/ParticipantsMenu';
 import Orientation from 'react-native-orientation-locker';
 import { preventDoubleClick } from '../../utils/Utility';
+import IconContainer from '../../components/IconContainer';
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 const microInf = {
   isCalled: false,
   timer: null,
 },
-camInf = {
-  isCalled: false,
-  timer: null,
-},
-shareScreenInf = {
-  isCalled: false,
-  timer: null,
-};
+  camInf = {
+    isCalled: false,
+    timer: null,
+  },
+  shareScreenInf = {
+    isCalled: false,
+    timer: null,
+  };
 
 
 export default Footer = ({
@@ -43,13 +45,14 @@ export default Footer = ({
   startRecord,
   stopRecord,
   isRecording,
+  stopCall
 }) => {
   const footerStyle = StyleSheet.create({
     wholeContainer: {
       flex: 1,
       flexDirection: 'row',
-      padding: 10,
-      justifyContent: 'space-around',
+      justifyContent: 'center',
+      gap: 7
     },
   });
 
@@ -126,35 +129,80 @@ export default Footer = ({
 
   return (
     <View style={[footerStyle.wholeContainer]}>
-      <IconWithLabel
-        text={microStat === 'on' ? 'Micro' : 'Micro'}
-        iconName={microStat === 'on' ? 'mic' : 'mic-outline'}
-        pressEvent={() => {
-          preventDoubleClick(microEvent, microInf);
+      <IconContainer
+        style={{
+          borderWidth: 1.5,
+          borderColor: "#2B3034",
         }}
-        color={microStat === 'on' ? '#9be3b1' : 'white'}
-      />
-      <IconWithLabel
-        text={camStat === 'on' ? 'Video' : 'Video'}
-        iconName={camStat === 'on' ? 'videocam' : 'videocam-outline'}
-        pressEvent={() => {
-          preventDoubleClick(camEvent, camInf);
-        }}
-        color={camStat === 'on' ? '#9be3b1' : 'white'}
-      />
-      <IconWithLabel
-        text={'haut - parleur'}
-        color={'white'}
-        iconName={audioStatus === 'Speaker' ? 'volume-high' : 'volume-mute'}
-        pressEvent={switchAudioRoute}
-      />
-      <IconWithLabel
-        text={'Parametres'}
-        iconName={settingsVisible ? 'settings' : 'settings-outline'}
-        pressEvent={() => {
+        onPress={() => {
           setSettingsVisible(true);
         }}
+        backgroundColor="transparent"
+        Icon={() => {
+          return <Ionicons
+            name="ellipsis-horizontal"
+            color="#fff"
+            size={26} />;
+        }}
       />
+
+      <IconContainer
+        style={{
+          borderWidth: 1.5,
+          borderColor: "#2B3034",
+        }}
+        onPress={() => {
+          preventDoubleClick(camEvent, camInf);
+        }}
+        backgroundColor={camStat === 'on' ? "#fff" : "transparent"}
+        Icon={() => {
+          return <Ionicons
+            name={camStat === 'on' ? 'videocam' : 'videocam-off'}
+            color={camStat === 'on' ? "#000" : "#fff"}
+            size={26} />;
+        }}
+      />
+
+      <IconContainer
+        style={{
+          borderWidth: 1.5,
+          borderColor: "#2B3034",
+        }}
+        onPress={switchAudioRoute}
+        backgroundColor={audioStatus === 'Speaker' ? "#fff" : "transparent"}
+        Icon={() => {
+          return <Ionicons
+            name={audioStatus === 'Speaker' ? 'volume-high' : 'volume-mute'}
+            color={audioStatus === 'Speaker' ? "#000" : "#fff"}
+            size={26} />;
+        }}
+      />
+
+      <IconContainer
+        style={{
+          borderWidth: 1.5,
+          borderColor: "#2B3034",
+        }}
+        onPress={() => {
+          preventDoubleClick(microEvent, microInf);
+        }}
+        backgroundColor={microStat === 'on' ? "#fff" : "transparent"}
+        Icon={() => {
+          return <Ionicons
+            name={microStat === 'on' ? 'mic' : 'mic-off'}
+            color={microStat === 'on' ? "#000" : "#fff"}
+            size={26} />;
+        }}
+      />
+
+      <IconContainer
+        backgroundColor={"red"}
+        onPress={stopCall}
+        Icon={() => {
+          return <Ionicons name="call" color="#fff" size={26} style={{ transform: [{ rotate: '135deg' }] }} />;
+        }}
+      />
+
       <Modal
         animationType={'slide'}
         visible={participantsVisible}
@@ -162,9 +210,9 @@ export default Footer = ({
         onRequestClose={() => {
           setParticipantsVisible(false);
         }}>
-        <View style={{flex: 1}}>
+        <View style={{ flex: 1 }}>
           <TouchableOpacity
-            style={{flex: 1}}
+            style={{ flex: 1 }}
             onPress={() => {
               setParticipantsVisible(false);
             }}
@@ -182,9 +230,9 @@ export default Footer = ({
         onRequestClose={() => {
           setHostVisible(false);
         }}>
-        <View style={{flex: 1}}>
+        <View style={{ flex: 1 }}>
           <TouchableOpacity
-            style={{flex: 1}}
+            style={{ flex: 1 }}
             onPress={() => {
               setHostVisible(false);
             }}
@@ -199,9 +247,9 @@ export default Footer = ({
         onRequestClose={() => {
           setSettingsVisible(false);
         }}>
-        <View style={{flex: 1, justifyContent: 'flex-end'}}>
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
           <TouchableOpacity
-            style={{flex: 1}}
+            style={{ flex: 1 }}
             onPress={() => {
               setSettingsVisible(false);
             }}

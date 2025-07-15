@@ -27,9 +27,9 @@ export default Header = ({ roomInf, chatId, exit }) => {
         <Text style={headerStyle.title}>{roomInf}</Text>
       </View>
       <View style={headerStyle.buttonContainer}>
-        <TouchableHighlight style={headerStyle.exitButton} onPress={exit}>
+        {/* <TouchableHighlight style={headerStyle.exitButton} onPress={exit}>
           <Text style={headerStyle.exitText}>Quitter</Text>
-        </TouchableHighlight>
+        </TouchableHighlight> */}
       </View>
       <Modal
         animationType={'slide'}
@@ -92,11 +92,12 @@ const headerStyle = StyleSheet.create({
   },
   exitButton: {
     backgroundColor: '#e00000',
-    borderRadius: 10,
+    borderRadius: 5,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingLeft: 9,
-    paddingRight: 9,
+    paddingLeft: 12,
+    paddingRight: 12,
+    padding: 5
   },
   exitText: {
     color: 'white',

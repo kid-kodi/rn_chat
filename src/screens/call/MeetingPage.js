@@ -21,7 +21,7 @@ export default function MeetingPage({ navigation, route }) {
 
   const { cameraStatus, microphoneStatus, chatId } = route.params;
 
-  const {user} = useUser();
+  const { user } = useUser();
 
   const [barHeight, setBarHeight] = useState(new Animated.Value(0));
   const [width, setWidth] = useState(300);
@@ -84,6 +84,7 @@ export default function MeetingPage({ navigation, route }) {
         'meetingEnd',
         recvEndSignal,
       );
+
       MeetingVariable.mediaService.registerBeMutedListener(
         'muted',
         mutedByHost,
@@ -371,7 +372,7 @@ export default function MeetingPage({ navigation, route }) {
       }).start();
     } else {
       Animated.timing(barHeight, {
-        toValue: -60,
+        toValue: -70,
         duration: 200,
         useNativeDriver: false,
       }).start();
@@ -416,7 +417,7 @@ export default function MeetingPage({ navigation, route }) {
       MeetingVariable.callService.endCall();
       goBack();
     }
-    finally{
+    finally {
     }
   };
 
@@ -445,19 +446,19 @@ export default function MeetingPage({ navigation, route }) {
         }
         okButton={
           <>
-          
-          <TextButton
-            text={'Pour tous'}
-            pressEvent={async () => {
-              await exit(true);
-            }}
-            containerStyle={{
-              borderColor: 'green',
-              borderWidth: 1,
-              borderRadius: 5,
-            }}
-            fontStyle={{ fontSize: 14, color: 'green' }}
-          />
+
+            <TextButton
+              text={'Pour tous'}
+              pressEvent={async () => {
+                await exit(true);
+              }}
+              containerStyle={{
+                borderColor: 'green',
+                borderWidth: 1,
+                borderRadius: 5,
+              }}
+              fontStyle={{ fontSize: 14, color: 'green' }}
+            />
           </>
         }
         content={alertError ? error : null}
@@ -498,7 +499,7 @@ export default function MeetingPage({ navigation, route }) {
         style={[screenStyle.header, { top: barHeight, width: width }]}>
         <Header chat={currentChat.current} roomInf={chatName} exit={backAction} />
       </Animated.View>
-      <View style={{ flex: 1, padding:10 }} onLayout={getMainContainerScale}>
+      <View style={{ flex: 1, padding: 10 }} onLayout={getMainContainerScale}>
         {showSubtitle && (
           <Subtitle maxHeight={height / 2} maxWidth={width * 0.7} />
         )}
@@ -513,6 +514,7 @@ export default function MeetingPage({ navigation, route }) {
           style={{ flex: 1, zIndex: 10 }}>
           {view === 'grid' ? (
             <GridView
+              currentUser={user}
               myStream={shareScreen ? myDisplayStream : myCameraStream}
               myFrontCam={frontCam}
               shareScreen={shareScreen}
@@ -522,6 +524,7 @@ export default function MeetingPage({ navigation, route }) {
             />
           ) : (
             <PortraitView
+              currentUser={user}
               width={width}
               height={height}
               myStream={shareScreen ? myDisplayStream : myCameraStream}
@@ -540,7 +543,7 @@ export default function MeetingPage({ navigation, route }) {
         </GestureRecognizer>
       </View>
       <Animated.View
-        style={[screenStyle.footer, { bottom: barHeight, width: width }]}>
+        style={[screenStyle.footer]}>
         <Footer
           startRecord={startRecord}
           stopRecord={stopRecord}
@@ -568,6 +571,7 @@ export default function MeetingPage({ navigation, route }) {
           }}
           audioStatus={audioRoute}
           switchAudioRoute={switchAudioRoute}
+          stopCall={backAction}
         />
       </Animated.View>
     </SafeAreaView>
@@ -585,10 +589,12 @@ const screenStyle = StyleSheet.create({
   },
   footer: {
     // position: 'absolute',
-    height: 60,
+    height: 80,
     backgroundColor: '#27272766',
     flexDirection: 'row',
-    alignSelf: 'flex-end',
+    alignItems: "center",
+    justifyContent: "center",
+    // alignSelf: 'flex-end',
     left: 0,
     zIndex: 20,
   },

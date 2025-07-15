@@ -200,15 +200,21 @@ export class MediaService {
       this.displayName = user.fullName;
       this.deviceName = user.fullName;
       // this.avatar = avatar;
-      this.avatar = avatarURL(user.profilPicture ? user.profilPicture : "defaultProfile.jpeg");
+      this.avatar = avatarURL(user.profilePicture ? user.profilePicture : "defaultProfile.jpeg");
       console.log('[Log]  Try to join meeting with chatId = ' + chatId);
 
       try {
         this.signaling = new SignalingService(
           this.meetingURL,
-          socketConnectionOptions,
+          {
+            auth: {
+              chatId,
+              userId: user._id
+            }, ...socketConnectionOptions
+          },
           this.onSignalingDisconnect.bind(this),
         );
+        console.log("first")
         this.registerSignalingListeners();
         await this.signaling.waitForConnection();
         await this.waitForAllowed();
@@ -261,7 +267,7 @@ export class MediaService {
       );
 
       console.log("####host , peerInfos")
-      console.log(host , peerInfos)
+      console.log(host, peerInfos)
 
       this.hostPeerId = host;
 
