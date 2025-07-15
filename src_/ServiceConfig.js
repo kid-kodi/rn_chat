@@ -1,64 +1,53 @@
-import {BASE_API_URL, SERVER_IP} from '@env';
-
 const config = {
-  // serverIp:  "api.solisalim.com",
-  serverIp:  SERVER_IP,
+  // serverIp: 'se-summer.cn',
+  serverIp: '192.168.1.180',
   serverPort: 5000,
-  serverUseHttps: true,   
-};
+  serverUseHttps: false,
+}
 
 export const iflytekAPPID = 'YourAPPID';
 
 export const SIMULCASTENCODING = [
-  {maxBitrate: 100000},
-  {maxBitrate: 300000},
-  {maxBitrate: 700000},
+  { maxBitrate: 100000 },
+  { maxBitrate: 300000 },
+  { maxBitrate: 700000 }
 ];
 
-const _serverURL = (config.serverUseHttps ? 'wss://' : 'http://') + config.serverIp;
+const _serverURL = (config.serverUseHttps ? 'https://' : 'http://') + config.serverIp + ':' + config.serverPort;
 
-export const fileUploadURL = userToken => {
-  return `${BASE_API_URL}/api/files?token=${userToken}`;
-};
+export const fileUploadURL = (userToken) => {
+  return `${_serverURL}/file?token=${userToken}`;
+}
 
-export const registerURL = (userId) => {
-  return `${serviceConfig.serverURL}/room?userId=${userId}`;
-};
-
-export const meetingURL = (chatId, userId) => {
-  return `${serviceConfig.serverURL}/room?chatId=${chatId}&userId=${userId}`;
-  // return `${serviceConfig.serverURL}/room`;
-};
-
-export const avatarURL = avatar => {
-  return `${BASE_API_URL}/image/${avatar}`;
-};
+export const meetingURL = (roomToken, userToken, myId) => {
+  return `${serviceConfig.serverURL}/room?roomId=${roomToken}&peerId=${myId}&userToken=${userToken}`;
+}
 
 export const serviceConfig = {
   requestTimeout: 10000,
   connectTimeout: 20000,
   reconnectTimeout: 60000,
-  mediaTimeout: 20000,
-  allowTimeout: 20000,
+  mediaTimeout: 10000,
+  allowTimeout: 10000,
   serverIp: config.serverIp,
   serverPort: config.serverPort,
   serverURL: _serverURL,
-};
+}
 
 export const SignalType = {
   request: 'request',
-  notify: 'notify',
-};
+  notify: 'notify'
+}
 
 export const MediaKind = {
   video: 'video',
-  audio: 'audio',
-};
+  audio: 'audio'
+}
 
 export const TransportType = {
   producer: 'producer',
-  consumer: 'consumer',
-};
+  consumer: 'consumer'
+}
 
 export const SignalMethod = {
   getRouterRtpCapabilities: 'getRouterRtpCapabilities',
@@ -97,23 +86,20 @@ export const SignalMethod = {
   getStatus: 'getStat',
   sendSpeechText: 'sendSpeechText',
   newSpeechText: 'newSpeechText',
-  startRecord: 'startRecord',
-  stopRecord: 'stopRecord',
-};
+}
 
 export const MeetingEndReason = {
   notAllowed: 'notAllowed',
   lostConnection: 'lostConnection',
   roomClosed: 'roomClosed',
   kicked: 'kicked',
-};
+}
 
 export const socketConnectionOptions = {
   // timeout: 3000,
   reconnection: true,
-  autoConnect: true,
+  autoConnect: false,
   reconnectionAttempts: Infinity,
   reconnectionDelayMax: 2000,
-  forceNew: true,
   // transports: ['websocket'],
-};
+}
