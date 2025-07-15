@@ -1277,7 +1277,7 @@ PODS:
     - React-Core
   - RNAudioRecorderPlayer (3.6.12):
     - React-Core
-  - RNBootSplash (6.3.8):
+  - RNBootSplash (6.3.10):
     - React-Core
   - RNCallKeep (4.3.16):
     - React
@@ -1755,7 +1755,7 @@ SPEC CHECKSUMS:
   ReactNativeIncallManager: bfc9c67358cd524882a7c4116dcb311ac2293d4b
   ReactNativeLocalization: fb171138cdc80d5d0d4f20243d2fc82c2b3cc48f
   RNAudioRecorderPlayer: 224c7de87722938aedce04000d09baa633148f5b
-  RNBootSplash: 95181f0d573171efb0dec33f96aebdb64203f8e3
+  RNBootSplash: 2c6b226e3ad3c97d16b6d53bd75d0cd281646bfb
   RNCallKeep: 94bbe46b807ccf58e9f6ec11bc4d6087323a1954
   RNCAsyncStorage: ec53e44dc3e75b44aa2a9f37618a49c3bc080a7a
   RNCCheckbox: a3ca9978cb0846b981d28da4e9914bd437403d77

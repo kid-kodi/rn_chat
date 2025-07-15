@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {BASE_API_URL} from '@env';
+import { BASE_API_URL } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default class ApiClient {
@@ -49,17 +49,17 @@ export default class ApiClient {
       // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
       // http.ClientRequest in node.js
       console.log(error.request);
-      return {error: error.request, message: 'Erreur de connexion'};
+      return { error: error.request, message: 'Erreur de connexion' };
     } else {
       // Something happened in setting up the request that triggered an Error
       console.log('Error', error.message);
-      return {error: error, message: error.message};
+      return { error: error, message: error.message };
     }
   }
 
   async get(url, options = {}) {
     return axios
-      .get(this.base_url + url, {...(await this.authHeader()), ...options})
+      .get(this.base_url + url, { ...(await this.authHeader()), ...options })
       .then(resp => resp.data)
       .catch(this.handleError);
   }
@@ -87,11 +87,13 @@ export default class ApiClient {
 
   async delete(url, payload = {}, options = {}) {
     return axios
-      .delete(this.base_url + url, payload, {
+      .delete(this.base_url + url, {
+        data: payload,
         ...(await this.authHeader()),
         ...options,
       })
       .then(resp => resp.data)
       .catch(this.handleError);
   }
+
 }
