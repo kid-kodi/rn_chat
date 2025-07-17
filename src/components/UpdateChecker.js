@@ -31,6 +31,8 @@ const UpdateChecker = () => {
       
       // Obtenez la version actuelle de l'app
       const currentVersion = DeviceInfo.getVersion();
+
+      console.log(currentVersion);
       
       // Comparez les versions (vous pourriez utiliser semver pour une comparaison plus robuste)
       if (currentVersion < platform.version) {

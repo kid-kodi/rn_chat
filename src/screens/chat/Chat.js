@@ -32,7 +32,6 @@ import ForwardModal from './ForwardModal';
 import ChatMessageOptions from './ChatMessageOptions';
 import { useMessage } from '../../contexts/MessageProvider';
 
-const MESSAGES_PER_PAGE = 50;
 const maxDuration = 300; // 5 minutes in seconds
 const minDuration = 1; // minimum 1 second
 
@@ -48,13 +47,14 @@ export default function Chat({ route }) {
   const api = useApi();
   const socket = useSocket();
 
-  const { getMessages, messages, setMessages, loading, loadingMore } = useMessage();
+  const {
+    getMessages, messages, setMessages,
+    loading, loadingMore, handleForwardMessage
+  } = useMessage();
 
   const [chatInfo, setChatInfo] = useState();
   const [chat, setChat] = useState();
-  // const [messages, setMessages] = useState([]);
-  // const [loading, setLoading] = useState(false);
-  // const [loadingMore, setLoadingMore] = useState(false);
+
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
 
@@ -81,14 +81,6 @@ export default function Chat({ route }) {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState([]);
   const [forwardModalVisible, setForwardModalVisible] = useState(false);
-
-  // Sample contacts data - replace with your actual contacts
-  const [contacts, setContacts] = useState([
-    { id: '1', name: 'John Doe' },
-    { id: '2', name: 'Jane Smith' },
-    { id: '3', name: 'Mike Johnson' },
-    // Add more contacts as needed
-  ]);
 
   const recordingRef = useRef(null);
   const durationTimerRef = useRef(null);
@@ -135,41 +127,6 @@ export default function Chat({ route }) {
       console.log(error);
     }
   }
-
-  // const loadMessages = async (chat_id, pageNum, isInitial = false) => {
-  //   if (!isInitial && !hasMore) return;
-
-  //   try {
-  //     if (isInitial) {
-  //       setLoading(true);
-  //     } else {
-  //       setLoadingMore(true);
-  //     }
-
-  //     const response = await api.get(
-  //       `/api/messages/${chat_id}?page=${pageNum}&limit=${MESSAGES_PER_PAGE}`
-  //     );
-
-  //     if (!response.success) throw new Error('Failed to load messages');
-
-  //     const data = await response.messages;
-
-  //     if (isInitial) {
-  //       setMessages(data);
-  //     } else {
-  //       setMessages(prev => [...prev, ...data]);
-  //     }
-
-  //     setHasMore(response.hasMore);
-  //     setPage(pageNum);
-
-  //   } catch (error) {
-  //     console.error('Load messages error:', error);
-  //   } finally {
-  //     setLoading(false);
-  //     setLoadingMore(false);
-  //   }
-  // };
 
   const handleLoadMore = useCallback(() => {
     if (!loadingMore && hasMore && chat) {
@@ -472,40 +429,6 @@ export default function Chat({ route }) {
     toggleSelectMode(true);
     toggleMessageSelect(message);
   }
-
-  // const handleOptionPress = (option) => {
-  //   setModalVisible(false);
-
-  //   switch (option) {
-  //     case 'Reply':
-  //       setReplyingTo(selectedMessage);
-  //       break;
-  //     case 'Forward':
-  //       handleForward(selectedMessage);
-  //       break;
-  //     case 'Copy':
-  //       Clipboard.setString(selectedMessage);
-  //       Alert.alert('Copied', 'Message copied to clipboard');
-  //       break;
-  //     case 'Delete':
-  //       Alert.alert('Delete', `Are you sure you want to delete this message?`, [
-  //         { text: 'Cancel', style: 'cancel' },
-  //         { text: 'Delete', style: 'destructive', onPress: () => console.log('Message deleted') }
-  //       ]);
-  //       break;
-  //     case 'Share':
-  //       Alert.alert('Share', `Sharing: ${selectedMessage}`);
-  //       break;
-  //     case 'Info':
-  //       Alert.alert('Info', `Message info: ${selectedMessage}`);
-  //       break;
-  //     case 'Cancel':
-  //       // Just close the modal
-  //       break;
-  //     default:
-  //       break;
-  //   }
-  // };
 
 
   const renderMessage = ({ item }) => {
@@ -1067,11 +990,8 @@ export default function Chat({ route }) {
   };
 
   // Handle forwarding selected messages
-  const handleForwardSelected = (contactIds) => {
-    selectedMessages.forEach(message => {
-      // Your forwarding logic for each message
-      console.log('Forwarding message:', message._id, 'to contacts:', contactIds);
-    });
+  const handleForwardSelected = (contact_id_list, chat_id_list) => {
+    handleForwardMessage(selectedMessages, contact_id_list, chat_id_list);
     setForwardModalVisible(false);
     setIsSelectMode(false);
     setSelectedMessages([]);
@@ -1257,10 +1177,9 @@ export default function Chat({ route }) {
         visible={forwardModalVisible}
         onClose={() => setForwardModalVisible(false)}
         messages={selectedMessages}
-        contacts={contacts}
         onForward={handleForwardSelected}
       />
 
-    </SafeAreaView >
+    </SafeAreaView>
   )
 }

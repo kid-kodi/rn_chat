@@ -3,8 +3,18 @@ import React, { useState } from 'react'
 import { styles } from './chatStyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useMessage } from '../../contexts/MessageProvider';
+import { useUser } from '../../contexts/UserProvider';
 
 const options = [
+  'Répondre',
+  'Transférer',
+  'Copier',
+  'Supprimer',
+  'Info',
+  'Annuler'
+];
+
+const options_map = [
   'Répondre',
   'Transférer',
   'Copier',
@@ -21,6 +31,43 @@ export default function ChatMessageOptions({
   handleForward }) {
 
   const msg = useMessage();
+  const userActions = useUser()
+
+  // 🪄 Helper: get options based on message type + ownership
+  const getOptionsForMessageType = (message) => {
+    if (!message) return ['Annuler'];
+
+    let options = [];
+
+    switch (message.type) {
+      case 'text':
+        options = ['Répondre', 'Transférer', 'Copier', 'Supprimer', 'Info'];
+        break;
+      case 'image':
+      case 'video':
+        options = ['Répondre', 'Transférer', 'Supprimer', 'Info'];
+        break;
+      case 'system':
+        options = ['Info'];
+        break;
+      default:
+        options = [];
+        break;
+    }
+
+    // 🚨 Only allow delete if message sent by current user
+    if (message?.sender?._id !== userActions?.user?._id) {
+      options = options.filter((opt) => opt !== 'Supprimer');
+    }
+
+    // Always add cancel as last option
+    options.push('Annuler');
+
+    return options;
+  };
+
+  const dynamicOptions = getOptionsForMessageType(selectedMessage);
+
 
   const handleOptionPress = (option) => {
     setModalVisible(false);
@@ -33,7 +80,7 @@ export default function ChatMessageOptions({
         handleForward(selectedMessage);
         break;
       case 'Copier':
-        Clipboard.setString(selectedMessage);
+        Clipboard.setString(selectedMessage.content);
         Alert.alert('Message copié', 'Message copié dans le presse-papiers');
         break;
       case 'Supprimer':
@@ -63,7 +110,7 @@ export default function ChatMessageOptions({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalView}>
-          {options.map((option) => (
+          {dynamicOptions.map((option) => (
             <TouchableOpacity
               key={option}
               style={styles.optionButton}

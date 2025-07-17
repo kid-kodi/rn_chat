@@ -81,6 +81,17 @@ export default function MessageProvider({ children }) {
 
   };
 
+  const handleForwardMessage = async (messages_list, contact_id_list, chat_id_list) => {
+    const message_id_list = messages_list.map((msg) => msg._id);
+    try {
+      await api.post(`/api/messages/forward`, { message_id_list, contact_id_list, chat_id_list });
+      toast.show("Message(s) envoyé(s)");
+    } catch (error) {
+      console.log(error);
+      toast.show(error);
+    }
+  };
+
   const updateMessage = (messageId, messageMap) => {
 
   };
@@ -109,7 +120,8 @@ export default function MessageProvider({ children }) {
         removeMessage,
         updateMessage,
         handleLikeMessage,
-        handleUnLikeMessage
+        handleUnLikeMessage,
+        handleForwardMessage
       }}>
       {children}
     </MessageContext.Provider>
