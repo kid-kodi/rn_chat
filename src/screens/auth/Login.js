@@ -5,8 +5,9 @@ import {
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
   Keyboard,
+  TouchableOpacity,
 } from 'react-native';
-import { useState } from 'react';
+import {useState} from 'react';
 import {useFormik} from 'formik';
 import * as Yup from 'yup';
 
@@ -24,6 +25,7 @@ import fontFamily from '../../assets/styles/fontFamily';
 import Strings from '../../constants/Strings';
 import Colors from '../../constants/Colors';
 import TextCustom from '../../components/TextCustom';
+import { navigate } from '../../utils/RootNavigation';
 
 const LoginSchema = Yup.object().shape({
   email: Yup.string()
@@ -32,9 +34,8 @@ const LoginSchema = Yup.object().shape({
   password: Yup.string().required('Le mot de passe est requis !'),
 });
 
-export default function Login({navigation}) {
-
-  const [secureText, setSecureText] = useState(true)
+export default function Login() {
+  const [secureText, setSecureText] = useState(true);
 
   const {login} = useUser();
 
@@ -53,7 +54,7 @@ export default function Login({navigation}) {
           placement: 'top',
         });
       } else {
-        navigation.navigate('TAB');
+        navigate('TAB');
       }
     },
   });
@@ -91,15 +92,17 @@ export default function Login({navigation}) {
                 onPressSecure={() => setSecureText(!secureText)}
               />
 
-              <Text
-                style={{
-                  ...styles.descStyle,
-                  alignSelf: 'flex-end',
-                  color: Colors.blueColor,
-                  fontFamily: fontFamily.semiBold,
-                }}>
-                {Strings.FORGOT_PASSWORD}?
-              </Text>
+              <TouchableOpacity onPress={() => navigate("FORGOT_PASSORD")}>
+                <Text
+                  style={{
+                    ...styles.descStyle,
+                    alignSelf: 'flex-end',
+                    color: Colors.blueColor,
+                    fontFamily: fontFamily.semiBold,
+                  }}>
+                  {Strings.FORGOT_PASSWORD}?
+                </Text>
+              </TouchableOpacity>
             </View>
             <View
               style={{

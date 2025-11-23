@@ -7,6 +7,9 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff"
   },
+  flex1: {
+    flex: 1
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -74,6 +77,10 @@ export const styles = StyleSheet.create({
   messageBubble: {
     padding: 12,
     borderRadius: 18
+  },
+  messageBubbleWithFile: {
+    padding: 8,
+    maxWidth: '80%',
   },
   userBubble: {
     backgroundColor: '#E7FED6',
@@ -179,7 +186,7 @@ export const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#5F77F6',
+    backgroundColor: '#F0F0F0',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -412,6 +419,15 @@ export const styles = StyleSheet.create({
     color: '#666',
     fontSize: 16,
   },
+  loadingMoreContainer: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  loadingMoreText: {
+    marginTop: 8,
+    color: '#666',
+    fontSize: 14,
+  },
   joinButton: {
     backgroundColor: Colors.primary,
     borderRadius: 20,
@@ -568,22 +584,54 @@ export const styles = StyleSheet.create({
   recordingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#ffffff',
-    padding: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
   },
   recordingIndicator: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    // backgroundColor: '#f0f0f0',
     padding: 8,
+  },
+  recordingCancelButton: {
+    padding: 8,
+  },
+  recordingInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordingDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FF3B30',
+    marginRight: 8,
   },
   recordingTime: {
     marginHorizontal: 8,
     fontWeight: 'bold',
+    fontSize: 16,
+    color: '#FF3B30',
   },
   recordingText: {
-    color: 'red',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FF3B30',
+    marginRight: 8,
+  },
+  recordingLabel: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginLeft: 4,
+  },
+  recordingStopButton: {
+    padding: 8,
   },
   modalOverlay: {
     flex: 1,
@@ -666,5 +714,93 @@ export const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
     backgroundColor: '#007AFF',
+  },
+  // System message styles (missed calls, etc.)
+  systemMessageContainer: {
+    alignItems: 'center',
+    marginVertical: 8,
+    paddingHorizontal: 16,
+  },
+  systemMessageBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F0F0',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    maxWidth: '70%',
+  },
+  systemMessageIcon: {
+    marginRight: 6,
+  },
+  systemMessageText: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+  },
+  systemMessageTime: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 4,
+  },
+  // Call log message styles (WhatsApp-like)
+  callLogContainer: {
+    marginVertical: 4,
+    marginHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    maxWidth: '85%',
+  },
+  callLogContainerMy: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#DCF8C6',
+  },
+  callLogContainerOther: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFFFFF',
+  },
+  callLogContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  callLogIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  callLogInfo: {
+    flex: 1,
+  },
+  callLogHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  callLogTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  callLogStatus: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
+  callLogCallbackButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  callLogTime: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 4,
+    textAlign: 'right',
   },
 });

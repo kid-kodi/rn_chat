@@ -1,60 +1,48 @@
 import 'react-native-gesture-handler';
 import { useEffect, useRef } from 'react';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ToastProvider } from 'react-native-toast-notifications';
 import Toast from 'react-native-toast-notifications';
 import Orientation from 'react-native-orientation-locker';
-import { NavigationContainer } from '@react-navigation/native';
-
-import ApiProvider from './contexts/ApiProvider';
-import UserProvider from './contexts/UserProvider';
-import ChatProvider from './contexts/ChatProvider';
-
-import SocketProvider from './contexts/SocketProvider';
-import { MenuProvider } from 'react-native-popup-menu';
 
 import Strings from './constants/Strings';
 
-import messaging from '@react-native-firebase/messaging';
 import {
-  RequestUserPermission, configureNotifications,
-  processPendingBackgroundActions,
-  getFCMToken,
-  saveFCMToken,
-  requestNotificationPermissions,
-  onTokenRefresh,
-  handleIncomingCall,
+  checkPendingBackgroundActions,
+  configureNotifications,
   setupFirebaseMessaging,
   updateBadgeCount
 } from './services/NotificationService';
-import { Platform, AppState, PermissionsAndroid } from 'react-native';
-import PushNotification from 'react-native-push-notification';
-import PushNotificationIOS from '@react-native-community/push-notification-ios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import MainNavigator from './navigations/MainNavigator';
-import { navigate, navigationRef } from './utils/RootNavigation';
-import UpdateChecker from './components/UpdateChecker';
-import { SignalingProvider } from './contexts/SignalingProvider';
+import { AppState } from 'react-native';
 import AppProvider from './contexts/AppProvider';
+import axios from 'axios';
+import RootNavigator from './navigations/RootNavigator';
 
 export default function App() {
   const appState = useRef(AppState.currentState);
   Orientation.lockToPortrait();
 
-  useEffect(() => {
-    // RequestUserPermission();
-    // Call this before creating the channel.
-    // requestNotificationPermission();
-    Strings.setLanguage('FR');
-  }, [messaging]);
+  const checkNetworkStatus = async () => {
+
+    const response = await axios.get("http://localhost:5000/api/app/info");
+    console.log(response)
+    console.log("first");
+  }
 
   // Configure notifications on app start
   useEffect(() => {
+
+    Strings.setLanguage('FR');
     // Set up app initialization
     setupApp();
 
     // Listen for app state changes (foreground, background, inactive)
-    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+    const appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App has come to the foreground
+        console.log('App has come to the foreground!');
+        updateBadgeCount(0); // Reset badge counter when app opens
+      }
+      appState.current = nextAppState;
+    });
 
     // Clean up on unmount
     return () => {
@@ -67,7 +55,7 @@ export default function App() {
   // Main setup function
   const setupApp = async () => {
     // Initialize notifications
-    configureNotifications(handleNotification);
+    configureNotifications();
 
     // Set up Firebase Cloud Messaging
     await setupFirebaseMessaging();
@@ -75,90 +63,15 @@ export default function App() {
     // Check for any pending actions from background state
     await checkPendingBackgroundActions();
 
+    // await checkNetworkStatus();
+
     // Reset badge count when app opens
     updateBadgeCount(0);
   };
 
-  const handleAppStateChange = (nextAppState) => {
-    if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-      // App has come to the foreground
-      console.log('App has come to the foreground!');
-      updateBadgeCount(0); // Reset badge counter when app opens
-    }
-    appState.current = nextAppState;
-  };
-
-  // Process pending background actions
-  const checkPendingBackgroundActions = async () => {
-    try {
-      const pendingAction = await processPendingBackgroundActions();
-      if (pendingAction && pendingAction.type === 'call') {
-        console.log('Processing pending call action:', pendingAction.data);
-        // Navigate to call screen with the pending call data
-        if (navigationRef.current) {
-          navigate('Call', {
-            callData: pendingAction.data,
-            isIncoming: true
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error processing pending background actions:', error);
-    }
-  };
-
-  // Handle notifications when clicked
-  const handleNotification = (notification) => {
-    const data = Platform.OS === 'ios' ? notification.data : notification.data;
-
-    // Different handling based on notification type
-    if (data.type === 'call') {
-      // Handle user responding to call notification
-      handleCallAction(data);
-    } else {
-      // Regular notification - navigate to the appropriate screen
-      handleDeepLinking(data);
-    }
-  };
-
-  // Handle call acceptance or rejection
-  const handleCallAction = (callData) => {
-    if (callData.action === 'accept') {
-      // Navigate to call screen
-      navigate('CALL', {
-        callData,
-        isIncoming: true
-      });
-    } else {
-      // Reject call - notify server
-      console.log('Call rejected:', callData.call_id);
-      // Call your API to reject the call
-      // rejectCall(callData.call_id);
-    }
-  };
-
-  // Handle navigation based on notification data
-  const handleDeepLinking = (data) => {
-    if (!navigationRef.current) return;
-
-    if (data.chatId) {
-      // Navigate to specific chat
-      console.log('Navigate to chat:', data.chatId);
-      navigate('CHAT', { chatId: data.chatId });
-    } else if (data.screen) {
-      // Navigate to a specific screen
-      console.log('Navigate to screen:', data.screen);
-      navigate(data.screen, data.params);
-    }
-  };
-
   return (
     <AppProvider>
-      <NavigationContainer
-        ref={navigationRef}>
-        <MainNavigator />
-        <UpdateChecker />
-      </NavigationContainer>
+      <RootNavigator />
       <Toast ref={ref => (global['toast'] = ref)} />
     </AppProvider>
   );

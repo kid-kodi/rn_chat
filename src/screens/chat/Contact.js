@@ -8,19 +8,17 @@ import DataItem from '../../components/DataItem';
 import Header from '../../components/Header';
 import { useApi } from '../../contexts/ApiProvider';
 import { useChat } from '../../contexts/ChatProvider';
+import { useConversation } from '../../contexts/ConversationProvider';
 import CustomImageView from '../../components/CustomImage';
 import { TimeAgo } from '../../utils/Utility';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { navigate } from '../../utils/RootNavigation';
-import { MeetingVariable } from '../../MeetingVariable';
-
-import uuid from 'react-native-uuid';
 import Button from '../../components/Button';
 
 export default function Contact(props) {
 	const api = useApi();
 	const { user } = useUser();
 	const { removeUserFromChat } = useChat();
+	const { initiateCall: initiateCallFromContext, setChat: updateChat } = useConversation();
 
 	const [isLoading, setIsLoading] = useState(false);
 	const id = props.route?.params?.id;
@@ -63,38 +61,15 @@ export default function Contact(props) {
 
 	const initiateCall = async (callType) => {
 		try {
+			if (!chat?._id) {
+				console.error('No chat available');
+				return;
+			}
 
-			// Generate a unique call ID
-			const callId = uuid.v4();
-
-			// Prepare call data
-			const callData = {
-				chatId: chat._id,
-				callId,
-				callType,
-				caller: user,
-			};
-
-			// Call the backend API to initiate call
-			const response = await api.post(`/api/call/initiate-call`, callData);
-			// setChat(response.chat);
-
-			MeetingVariable.callService.setup();
-
-			const callUUID = MeetingVariable.callService.startCall(
-				callId, chat._id, chatInfo.name, chatInfo.isGroupChat, callData.callType === "video");
-
-			// Navigate to call screen
-			navigate('CALL', {
-				callUUID,
-				chatId: callData.chatId,
-				cameraStatus: callData.callType === "video",
-				microphoneStatus: false,
-			});
+			// Use centralized initiateCall from context
+			await initiateCallFromContext(chat, callType, user, api, updateChat, props.navigation);
 		} catch (error) {
 			console.error('Failed to initiate call:', error);
-		} finally {
-			// setIsCallLoading(false);
 		}
 	};
 

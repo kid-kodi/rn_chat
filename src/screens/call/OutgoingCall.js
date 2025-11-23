@@ -1,13 +1,15 @@
 import {View, Text} from 'react-native';
 import React, {useEffect} from 'react';
 import {RoundButton, TextButton} from '../core/components/MyButton';
-import socketService from '../core/networks/SocketService';
+import { useSocket } from '../../contexts/SocketProvider';
 
 export default function OutgoingCall({navigation, route}) {
-  const socket = socketService.getInstance();
+  const socket = useSocket();
   const {cameraStatus, microphoneStatus, callee, caller, chat} = route.params;
 
   useEffect(() => {
+    if (!socket) return;
+
     socket.on('reject', callData => {
       navigation.navigate('TAB');
     });
@@ -24,13 +26,13 @@ export default function OutgoingCall({navigation, route}) {
     });
 
     return () => {
-      socket.removeListener('reject');
-      socket.removeListener('accept');
+      socket.off('reject');
+      socket.off('accept');
     };
-  }, []);
+  }, [socket]);
 
   const handleCancelCall = () => {
-    socket.emit('cancelCall', {callee, caller, chat});
+    socket?.emit('cancelCall', {callee, caller, chat});
     navigation.navigate('TAB');
   };
 

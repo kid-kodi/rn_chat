@@ -75,7 +75,7 @@ export default function ChatSetting(props) {
 
   return (
     <Screen>
-      <Header leftText="Paramètres" />
+      <Header leftText="Infos du groupe" />
       <ScrollView contentContainerStyle={styles.scrollView}>
         <ProfileImage
           showEditButton={true}
@@ -88,18 +88,20 @@ export default function ChatSetting(props) {
           chat={chat}
         />
 
-        <Input
-          label="ChatName"
-          errorText={formik.errors.chatName}
-          value={formik.values.chatName}
-          onChangeText={formik.handleChange('chatName')}
-        />
+        <View style={{ flex: 1, width: "100%", marginTop: 20 }}>
+          <Input
+            // label="ChatName"
+            errorText={formik.errors.chatName}
+            value={formik.values.chatName}
+            onChangeText={formik.handleChange('chatName')}
+          />
+        </View>
 
         <View style={styles.sectionContainer}>
           <Text style={styles.heading}>{chat?.users?.length} Participants</Text>
 
           <DataItem
-            title="Add users"
+            title="Ajouter un nouveau membre"
             icon={'add'}
             type="button"
             onPress={() =>
@@ -109,8 +111,8 @@ export default function ChatSetting(props) {
               })
             }
           />
-          
-          
+
+
 
           {chat?.users?.slice(0, defaultNumber).map(u => {
             return (

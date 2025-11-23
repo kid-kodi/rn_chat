@@ -44,7 +44,7 @@ export const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 15,
-      height: 44,
+      height: 35,
       flex: 1
     },
     headerIcons: {
@@ -63,5 +63,48 @@ export const styles = StyleSheet.create({
       flex: 1,
       color: Colors.textColor,
       fontSize: 16,
+    },
+    footer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: "#fff",
+      borderTopWidth: 1,
+      borderTopColor: "#eee",
+      padding: 5,
+      flexDirection: 'column',
+      alignItems: 'center',
+      elevation: 5,
+    },
+    cancelButton: {
+      alignSelf: 'flex-end',
+      marginBottom: 6,
+    },
+    cancelText: {
+      color: Colors.red,
+      fontWeight: '600',
+    },
+    actionsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 10,
+    },
+    actionButton: {
+      paddingVertical: 5,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      textAlign:"center",
+      flex:1,
+      justifyContent:"center",
+      alignItems:"center"
+    },
+    actionText: {
+      color: Colors.whiteColor,
+      fontWeight: '600',
+    },
+    selectedCount: {
+      fontSize: 12,
+      color: Colors.grey,
     },
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -260,6 +260,7 @@ const styles = StyleSheet.create({
 
 export default function MessageItem(props) {
 
+
   const message = props.message;
   const onPress = props.onPress;
   const onLongPress = props.onLongPress;
@@ -269,6 +270,37 @@ export default function MessageItem(props) {
   const [cachedUri, setCachedUri] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [sound, setSound] = useState(null);
+
+
+  const longPressTriggered = useRef(false);
+
+  const handlePressIn = () => {
+    // Reset flag each time user touches down
+    longPressTriggered.current = false;
+  };
+
+  const handleLongPress = () => {
+    longPressTriggered.current = true; // Mark that longPress fired
+
+    if (props.isSelectMode) {
+      onToggleSelect?.(message);
+    } else {
+      onLongPress?.(message);
+    }
+  };
+
+  const handlePress = () => {
+    if (longPressTriggered.current) {
+      // Prevent onPress after longPress
+      return;
+    }
+
+    if (props.isSelectMode) {
+      onToggleSelect?.(message);
+    } else {
+      onPress?.(message);
+    }
+  };
 
   useEffect(() => {
     loadCachedContent();
@@ -338,9 +370,6 @@ export default function MessageItem(props) {
       // const audioUri = cachedUri || `${BASE_API_URL}/image/${message.file?.name}`;
       const audioUri = cachedUri || `${BASE_API_URL}/image/${message.file?.name}`;
 
-      console.log("###audioUri");
-      console.log(`${BASE_API_URL}/image/${message.file?.name}`);
-
 
       const newSound = new Sound(audioUri, null, (error) => {
         if (error) {
@@ -349,7 +378,7 @@ export default function MessageItem(props) {
           return;
         }
 
-        setDuration(newSound.getDuration());
+        // setDuration(newSound.getDuration());
         setSound(newSound);
 
         newSound.setVolume(1);
@@ -357,7 +386,7 @@ export default function MessageItem(props) {
         newSound.play((success) => {
           if (success) {
             setIsPlaying(false);
-            setCurrentTime(0);
+            // setCurrentTime(0);
           } else {
             console.error('Sound playback failed');
           }
@@ -408,11 +437,11 @@ export default function MessageItem(props) {
 
   // In your MessageItem component
   const renderForwardedHeader = () => {
-    if (!message.isForwarded) return null;
+    if (!message?.forwardedFrom) return null;
 
     return (
       <Text style={styles.forwardedHeader}>
-        Forwarded from {message.originalSender} • {formatDate(message.originalTimestamp)}
+        Transféré de {message.sender.fullName}
       </Text>
     );
   };
@@ -451,9 +480,12 @@ export default function MessageItem(props) {
     message.bgColor && { backgroundColor: message.bgColor }]}>
       {renderForwardedHeader()}
       {renderReplyPreview()}
-      <Text style={[styles.messageText, props.isOwn && styles.ownMessageText]}>
-        {message.content}
-      </Text>
+      <TouchableOpacity onPressIn={handlePressIn}
+        onLongPress={handleLongPress}
+        delayLongPress={300} // Optional: adjust how long to hold before longPress fires  
+        style={[styles.messageText, props.isOwn && styles.ownMessageText]}>
+        <Text>{message.content}</Text>
+      </TouchableOpacity>
       {renderTimestamp()}
     </View>
   );
@@ -469,9 +501,12 @@ export default function MessageItem(props) {
           <ActivityIndicator size="large" color="#007AFF" />
         </View>
       ) : (
-        <TouchableOpacity onPress={() => openFile?.()}>
+        <TouchableOpacity onPressIn={handlePressIn}
+          onLongPress={handleLongPress}
+          delayLongPress={300} // Optional: adjust how long to hold before longPress fires 
+          onPress={() => openFile?.()}>
           <Image
-            source={{ uri: cachedUri || `${BASE_API_URL}/image/${message.file.name}` }}
+            source={{ uri: cachedUri || `${BASE_API_URL}/image/${message?.file?.name}` }}
             style={styles.imageMessage}
             resizeMode="cover"
           />
@@ -497,7 +532,10 @@ export default function MessageItem(props) {
           <ActivityIndicator size="large" color="#007AFF" />
         </View>
       ) : (
-        <TouchableOpacity onPress={() => openFile?.()}>
+        <TouchableOpacity onPressIn={handlePressIn}
+          onLongPress={handleLongPress}
+          delayLongPress={300} // Optional: adjust how long to hold before longPress fires 
+          onPress={() => openFile?.()}>
           <Video
             source={{ uri: cachedUri || `${BASE_API_URL}/image/${message?.file?.name}` }}
             style={styles.videoMessage}
@@ -527,6 +565,9 @@ export default function MessageItem(props) {
       {renderReplyPreview()}
       <TouchableOpacity
         style={styles.audioButton}
+        onPressIn={handlePressIn}
+        onLongPress={handleLongPress}
+        delayLongPress={300} // Optional: adjust how long to hold before longPress fires 
         onPress={isPlaying ? pauseAudio : (sound ? resumeAudio : playAudio)}
       >
         <Text style={styles.audioButtonText}>
@@ -550,6 +591,9 @@ export default function MessageItem(props) {
       style={[styles.documentContainer, props.isOwn && styles.ownMessage,
       message.bgColor && { backgroundColor: message.bgColor }
       ]}
+      onPressIn={handlePressIn}
+      onLongPress={handleLongPress}
+      delayLongPress={300} // Optional: adjust how long to hold before longPress fires 
       onPress={() => openFile?.()}
     >
       {renderForwardedHeader()}
@@ -559,7 +603,7 @@ export default function MessageItem(props) {
       </View>
       <View style={styles.documentInfo}>
         <Text style={[styles.documentName, props.isOwn && styles.ownMessageText]} numberOfLines={1}>
-          {message.file.name || 'Document'}
+          {message.file.data.originalname || 'Document'}
         </Text>
         <Text style={[styles.documentSize, props.isOwn && styles.ownMessageText]}>
           {`${(message.file.data.size / (1024 * 1024)).toFixed(1)} MB` || 'Unknown size'}
@@ -617,13 +661,15 @@ export default function MessageItem(props) {
           {!props.isOwn && (
             <Text style={styles.senderName}>{message.sender?.fullName}</Text>
           )}
-          <TouchableOpacity
-            onPress={() => props.isSelectMode ? onToggleSelect?.(message) : onPress?.(message)}
-            onLongPress={() => props.isSelectMode ? onToggleSelect?.(message) : onLongPress?.(message)}
+          {/* <TouchableOpacity
+            onPressIn={handlePressIn}
+            onLongPress={handleLongPress}
+            delayLongPress={300} // Optional: adjust how long to hold before longPress fires
+            onPress={handlePress}
             activeOpacity={0.8}
-          >
-            {renderContent()}
-          </TouchableOpacity>
+          > */}
+          {renderContent()}
+          {/* </TouchableOpacity> */}
         </View>
       </View>
     </>

@@ -1,252 +1,204 @@
+// ConversationList.jsx
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
+  SafeAreaView,
+  TouchableOpacity,
   FlatList,
   ActivityIndicator,
-  TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import Icon from 'react-native-vector-icons/Feather';
-
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import uuid from 'react-native-uuid';
-
-import DataItem from '../../components/DataItem';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { useUser } from '../../contexts/UserProvider';
+import { navigate } from '../../utils/RootNavigation';
+import Navbar from '../../components/Navbar';
+import { styles } from './styles';
 import Colors from '../../constants/Colors';
 import CommonStyles from '../../constants/CommonStyles';
-import { useSocket } from '../../contexts/SocketProvider';
-import { useApi } from '../../contexts/ApiProvider';
-import { useUser } from '../../contexts/UserProvider';
+import SearchModal from './components/SearchModal';
+import ConversationItem from './components/ConversationItem';
+import { EmptyState } from './components/EmptyState';
+import { useConversation } from '../../contexts/ConversationProvider';
 import { useFocusEffect } from '@react-navigation/native';
-import { formatChatDate } from '../../utils/Utility';
-import Navbar from '../../components/Navbar';
-import { navigate } from '../../utils/RootNavigation';
-import { styles } from './styles';
-import { MeetingVariable } from '../../MeetingVariable';
 
-
-
-export default function ConversationList({ route, navigation }) {
-  const chatId = route?.params?.chatId;
-  const selectedUserId = route?.params?.selectedUserId;
-
+export default function ConversationListScreen({ navigation }) {
   const { user } = useUser();
-  const api = useApi();
-  const socket = useSocket();
+  const { 
+    chats, 
+    loading, 
+    unreadMessages, 
+    joinCall, 
+    removeChats, 
+    refresh 
+  } = useConversation();
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [searchText, setSearchText] = useState('');
 
-  const [chats, setChats] = useState();
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [selectionMode, setSelectionMode] = useState(false);
 
-  const [unReadMessages, setUnreadMessages] = useState([]);
+  // ✅ Refresh conversation list when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('ConversationListScreen focused, refreshing chats...');
+      refresh();
+    }, [refresh])
+  );
 
-  const chatPressed = async (chat) => {
-    navigate('CHAT', { chatId: chat._id });
-  };
+  const footerActions = [
+    {
+      label: 'Supprimer',
+      color: 'red',
+      icon: 'trash-outline',
+      onPress: async (selectedIds) => {
+        await removeChats(selectedIds);
+        setSelectedItems([]);
+        setSelectionMode(false);
+      },
+    }
+  ]
 
-  function updateConversationWithJoinButton(chatId, callerId, cameraStatus,
-    microphoneStatus) {
-    setChats(prev =>
-      prev.map(conv =>
-        conv._id === chatId
-          ? {
-            ...conv, ongoingCall: {
-              chatId, callerId, cameraStatus,
-              microphoneStatus
-            }
-          }
-          : conv
-      )
-    );
-  }
-
-  function joinCall(data) {
-
-    // Generate a unique call ID
-    const callId = uuid.v4();
-
-    // Prepare call data
-    const callData = {
-      chatId: data.ongoingCall.chatId,
-      callId,
-      callType: data.ongoingCall.cameraStatus ? "video" : "audio",
-      caller: user,
-    };
-
-    // const callUUID = MeetingVariable.callService.startCall(
-    //   callId, data.ongoingCall.chatId, 
-    //   data.isGroupChat ? data.users[0].fullName : data.chatName, 
-    //   data.isGroupChat, callData.callType === "video");
-
-
-    navigation.navigate('CALL', {
-      // callUUID,
-      chatId: data.ongoingCall.chatId,
-      cameraStatus: data.ongoingCall.cameraStatus,
-      microphoneStatus: data.ongoingCall.microphoneStatus,
-    });
-  }
-
-  useEffect(() => {
-    if (!chatId) return;
-    (async () => {
-      setIsLoading(true);
-      const response = await api.get(`/api/chats/${chatId}`);
-      console.log(response.success);
-      if (response.success) {
-        setIsLoading(false);
-        chatPressed(response.chat);
-      }
-    })();
-  }, [chatId]);
-
-  useEffect(() => {
-    socket.emit('join_chat', user._id);
-
-    socket.on('new_chat', chat => {
-      setChats(oldArray => [...oldArray, chat])
-    });
-
-    socket.on('new_message', values => {
-      setChats(prevState => {
-        const newState = prevState.map(obj => {
-          console.log(obj._id === values.chat._id)
-          if (obj._id === values.chat._id) {
-            return { ...obj, lastMessage: values };
-          }
-          return obj;
-        });
-
-        return newState;
+  // hide bottom tab when selection mode is active
+  useLayoutEffect(() => {
+    const parent = navigation.getParent?.("myTabs");
+    if (parent) {
+      parent.setOptions({ 
+        tabBarStyle: selectionMode ? { display: 'none' } : undefined 
       });
-    });
+    }
+  }, [navigation, selectionMode]);
 
-    socket.on("call_notification", ({ chatId, callerId, cameraStatus,
-      microphoneStatus }) => {
-      updateConversationWithJoinButton(chatId, callerId, cameraStatus,
-        microphoneStatus);
+  const toggleSelection = useCallback((id) => {
+    setSelectedItems((prev) => {
+      if (prev.includes(id)) {
+        const updated = prev.filter((item) => item !== id);
+        if (updated.length === 0) setSelectionMode(false);
+        return updated;
+      } else {
+        return [...prev, id];
+      }
     });
-
-    return () => {
-      socket.removeListener('new_chat');
-      socket.removeListener('new_message');
-      socket.removeListener("call_notification");
-      socket.emit('leave_chat', user._id);
-    };
   }, []);
 
+  const handleChatPress = chat => {
+    if (selectionMode) {
+      toggleSelection(chat._id);
+    }
+    else {
+      navigate('CHAT', { chatId: chat._id })
+    }
+  };
 
-  useEffect(() => {
-    if (!selectedUserId) return;
+  const handleLongPress = (id) => {
+    setSelectionMode(true);
+    setSelectedItems([id]);
+  };
 
-    navigate("CHAT", { newChat: { participants: [selectedUserId, user._id] } })
 
-  }, [route?.params])
-
-  useEffect(() => {
-    (async () => {
-      setIsLoading(true);
-      const response = await api.get(`/api/chats`);
-      if (response.success) {
-        setChats(response.chats);
-        setIsLoading(false);
-      }
-    })();
-  }, [])
+  const handleCancelSelection = () => {
+    setSelectionMode(false);
+    setSelectedItems([]);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <Navbar navigation={navigation} />
-      {isLoading && (
-        <View style={CommonStyles.center}>
-          <ActivityIndicator size={'large'} color={Colors.primary} />
-        </View>
-      )}
 
-      {/* Search Bar */}
-      {/* <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color="#A0A0A0" style={styles.searchIcon} />
-          <Text style={styles.searchInput}>Rechercher</Text>
-        </View>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => setFilterVisible(!filterVisible)}
-          >
-            <Ionicons name="filter" size={20} color={Colors.textColor} />
-          </TouchableOpacity>
-        </View>
-      </View> */}
+      {/* Search bar */}
+      <View style={styles.searchContainer}>
+        <TouchableOpacity
+          onPress={() => setSearchModalVisible(true)}
+          style={styles.searchInputContainer}>
+          <Icon name="search" size={20} color={Colors.grey} style={{ marginRight: 8 }} />
+          <Text style={styles.searchText}>Rechercher...</Text>
+        </TouchableOpacity>
+      </View>
 
-      {!isLoading && chats?.length === 0 && (
+      {/* New reusable Search Modal */}
+      <SearchModal
+        visible={searchModalVisible}
+        onClose={() => setSearchModalVisible(false)}
+        query={searchText}
+        onChangeQuery={setSearchText}
+        currentSection={`conversations`}
+        loading={false} // you can wire real loading later
+        onPressFilter={section => console.log(section)}
+      />
+
+      {/* Content */}
+      {loading ? (
         <View style={CommonStyles.center}>
-          <Icon
-            name="message-circle"
-            size={55}
-            color={Colors.lightGrey}
-            style={styles.noResultsIcon}
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : chats?.length > 0 ? (
+        <>
+          <FlatList
+            data={chats}
+            keyExtractor={item => item._id}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingBottom: selectionMode ? 70 : 0
+            }}
+            renderItem={({ item }) => (
+              <ConversationItem
+                chat={item}
+                unreadMessages={unreadMessages}
+                onPress={handleChatPress}
+                onJoinCall={chat => joinCall(chat, navigation, user)}
+                unreadCount={item.unreadCount}
+                onLongPress={() => handleLongPress(item._id)}
+                type={selectionMode ? 'checkbox' : 'default'}
+                isChecked={selectedItems.includes(item._id)}
+                currentUserId={user._id}
+              />
+            )}
           />
-          <Text style={styles.noResultsText}>Aucunes conversations!</Text>
-        </View>
+          {selectionMode && (
+            <FooterAction
+              selectedCount={selectedItems.length}
+              onCancel={handleCancelSelection}
+              actions={footerActions.map((action) => ({
+                ...action,
+                onPress: () => action.onPress(selectedItems),
+              }))}
+            />
+          )}
+        </>
+      ) : (
+        <EmptyState message="Aucune conversation !" />
       )}
 
-      {!isLoading && chats?.length > 0 && (
-        <FlatList
-          style={{ paddingVertical: 0, paddingHorizontal: 16 }}
-          data={chats}
-          renderItem={({ item }) => {
-            return (
-              <>
-                {item.isGroupChat ? (
-                  <DataItem
-                    title={item?.chatName}
-                    subTitle={
-                      item.lastMessage?.content ||
-                      item.users[0]?.about ||
-                      'hi!'
-                    }
-                    rightText={formatChatDate(item.lastMessage?.createdAt)}
-                    unreadCount={
-                      unReadMessages?.filter(n => n.chat._id === item._id)
-                        .length
-                    }
-                    image={item?.image?.name}
-                    onPress={() => chatPressed(item)}
-                    ongoingCall={item.ongoingCall}
-                    joinCall={() => joinCall(item)}
-                  />
-                ) : (
-                  <DataItem
-                    title={item?.users[0]?.fullName}
-                    subTitle={
-                      item?.lastMessage?.content ||
-                      item?.users[0]?.about ||
-                      'hi!'
-                    }
-                    rightText={formatChatDate(item?.lastMessage?.createdAt)}
-                    unreadCount={
-                      unReadMessages?.filter(n => n.chat._id === item._id)
-                        .length
-                    }
-                    image={item.users[0]?.profilePicture}
-                    onPress={() => chatPressed(item)}
-                    ongoingCall={item.ongoingCall}
-                    joinCall={() => joinCall(item)}
-                  />
-                )}
-              </>
-            );
-          }}
-        />
-      )}
-      <TouchableOpacity
+      {/* Floating button */}
+      {!selectionMode && <TouchableOpacity
         style={styles.fab}
-        onPress={() => {
-          navigation.navigate("NEWCHAT");
-        }}>
-        <Icon name="message-circle" color={'#fff'} size={25} />
-      </TouchableOpacity>
+        onPress={() => navigation.navigate('NEWCHAT')}>
+        <Icon name="chatbubble-outline" color="#fff" size={25} />
+      </TouchableOpacity>}
     </SafeAreaView>
+  );
+}
+
+function FooterAction({ selectedCount, onCancel, actions }) {
+  return (
+    <View style={styles.footer}>
+      <TouchableOpacity onPress={onCancel} style={styles.cancelButton}>
+        <Text style={styles.cancelText}>Annuler</Text>
+      </TouchableOpacity>
+
+      <View style={styles.actionsContainer}>
+        {actions.map((action, index) => (
+          <TouchableOpacity
+            key={index}
+            onPress={action.onPress}
+            style={[styles.actionButton]}
+          >
+            <Icon name={action.icon} color={action.color || Colors.primary } size={25} />
+            <Text style={[styles.actionText, {color : action.color || Colors.primary}]}>{action.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Text style={styles.selectedCount}>{selectedCount} sélectionné(s)</Text>
+    </View>
   );
 }

@@ -14,14 +14,21 @@ import { clearMeetingVariable } from '../../services/MeetingService';
 import { MyAlert } from '../../components/MyAlert';
 import { TextButton } from '../../components/MyButton';
 import axiosInstance from '../../utils/AxiosInstance';
-import { goBack } from '../../utils/RootNavigation';
+import { goBack, navigate } from '../../utils/RootNavigation';
 import { useUser } from '../../contexts/UserProvider';
+import { useConversation } from '../../contexts/ConversationProvider';
+import { useApi } from '../../contexts/ApiProvider';
+import { useToast } from 'react-native-toast-notifications';
+import { useKeepAwake } from "@sayem314/react-native-keep-awake";
 
 export default function MeetingPage({ navigation, route }) {
 
   const { cameraStatus, microphoneStatus, chatId } = route.params;
 
   const { user } = useUser();
+  const { endCall: endCallContext } = useConversation();
+  const api = useApi();
+  const toast = useToast();
 
   const [barHeight, setBarHeight] = useState(new Animated.Value(0));
   const [width, setWidth] = useState(300);
@@ -41,6 +48,8 @@ export default function MeetingPage({ navigation, route }) {
   const [hideHeadAndFoot, setHideHeadAndFoot] = useState(false);
   const [frontCam, setFrontCam] = useState(true);
   // const [leaveAndClose, setLeaveAndClose] = useState(false);
+
+  useKeepAwake();
 
   const [camStat, setCamStat] = useState(
     cameraStatus === true || cameraStatus === 'true' ? 'on' : 'off',
@@ -383,6 +392,7 @@ export default function MeetingPage({ navigation, route }) {
 
   exit = async (leaveAndClose) => {
     try {
+      // Close local media streams
       if (myCameraStream) {
         await closeCamera();
       }
@@ -392,6 +402,8 @@ export default function MeetingPage({ navigation, route }) {
       if (myDisplayStream) {
         await closeScreenShare();
       }
+
+      // Clean up media service
       if (MeetingVariable.mediaService) {
         //delete all listeners
         MeetingVariable.mediaService.deletePeerUpdateListener('peer');
@@ -402,22 +414,40 @@ export default function MeetingPage({ navigation, route }) {
         MeetingVariable.mediaService.deleteBeMutedListener('muted');
 
         if (leaveAndClose) {
-          console.log('CLOSE FOR EVERY ONE');
+          console.log('🔴 CLOSE FOR EVERYONE');
           await MeetingVariable.mediaService.closeRoom();
         } else {
+          console.log('🚪 LEAVE MEETING');
           await MeetingVariable.mediaService.leaveMeeting();
         }
       }
-      MeetingVariable.callService.endCall()
+
+      // Get callId from current chat
+      const callId = currentChat.current?.ongoingCall?.callId;
+
+      if (callId && chatId) {
+        // Update backend and local state through context
+        console.log('📴 Calling endCall context:', { chatId, callId, leaveAndClose });
+        await endCallContext(chatId, callId, leaveAndClose, api);
+      } else {
+        console.warn('⚠️ No callId found, skipping backend call end');
+      }
+
+      // Clean up call service and variables
+      MeetingVariable.callService.endCall();
       clearMeetingVariable();
-      goBack();
+
+      // Navigate back to chat list
+      navigate(`CHATLIST`);
     } catch (e) {
-      toast.show(e, { type: 'danger', duration: 1300, placement: 'top' });
+      console.error('❌ Error during exit:', e);
+      toast.show(e.message || e, { type: 'danger', duration: 1300, placement: 'top' });
+
+      // Cleanup even if error occurs
       MeetingVariable.messages = [];
       MeetingVariable.callService.endCall();
-      goBack();
-    }
-    finally {
+
+      navigate(`CHATLIST`);
     }
   };
 

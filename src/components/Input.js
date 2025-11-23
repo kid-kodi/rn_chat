@@ -4,7 +4,7 @@ import Colors from '../constants/Colors';
 
 export default function Input(props) {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, props.style]}>
       {props.label && <Text style={styles.label}>{props.label}</Text>}
       <View style={styles.inputContainer}>
         {props.icon && (

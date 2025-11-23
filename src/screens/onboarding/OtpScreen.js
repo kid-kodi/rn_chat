@@ -48,12 +48,7 @@ export default function OtpScreen({ route, navigation }) {
     onSubmit: async values => {
       const response = await activation(values);
 
-      if (response.success) {
-        navigation.navigate('EDIT_PASSWORD', {
-          activation_token: route.params.activation_token,
-          email: route.params.email,
-        });
-      } else {
+      if (!response.success) {
         toast.show(response.message, {
           type: 'danger',
           duration: 5000,

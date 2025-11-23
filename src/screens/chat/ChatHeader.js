@@ -1,131 +1,110 @@
 import { Text, TouchableOpacity, View } from 'react-native'
 import { styles } from './chatStyles';
 import { navigate } from '../../utils/RootNavigation';
+import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import CustomImageView from '../../components/CustomImage';
+import { getMessagePreview } from '../../utils/messageFormatter';
 
 import { BASE_API_URL } from '@env';
-import { MeetingVariable } from '../../MeetingVariable';
 
-import uuid from 'react-native-uuid';
 import { useUser } from '../../contexts/UserProvider';
 import { useApi } from '../../contexts/ApiProvider';
+import { useConversation } from '../../contexts/ConversationProvider';
 
-export default function ChatHeader({ chatInfo, chat, isSelectMode, setIsSelectMode }) {
+export default function ChatHeader({ chatInfo, chat, isSelectMode, setIsSelectMode, selectedCount, onCancelSelect, onDeleteSelected }) {
 
   const { user } = useUser();
   const api = useApi();
+  const navigation = useNavigation();
+  const { setChat: updateChat, joinCall: joinCallFromContext, initiateCall: initiateCallFromContext } = useConversation();
 
-  const initiateCall = async (callType) => {
-    // if (isCallLoading) return;
+  // Get last message preview if available, otherwise show status
+  const headerSubtitle = chat?.lastMessage
+    ? getMessagePreview(chat.lastMessage, user?._id)
+    : chatInfo?.status;
 
+  const handleAudioCall = async () => {
     try {
-      // setIsCallLoading(true);
-
-      // Start the outgoing call with CallKeep
-
-      // Generate a unique call ID
-      const callId = uuid.v4();
-
-      // // Prepare call data
-      const callData = {
-        chatId: chat._id,
-        callId,
-        callType,
-        caller: user,
-      };
-
-      // ****** should be implemented on the server side //
-      // Call the backend API to initiate call
-      // const response = await api.post(`/api/call/initiate-call`, callData);
-      // setChat(response.chat);
-
-      // MeetingVariable.callService.setup(); kouamemorisgue@gmail.com
-
-      // const callUUID = MeetingVariable.callService.startCall(
-      //   callId, chat._id, chatInfo.name, chatInfo.isGroupChat, callData.callType === "video");
-
-      // Navigate to call screen
-      navigate('CALL', {
-        chatId: callData.chatId,
-        cameraStatus: callData.callType === "video",
-        microphoneStatus: false,
-      });
-
+      await initiateCallFromContext(chat, 'audio', user, api, updateChat, navigation);
     } catch (error) {
-      console.error('Failed to initiate call:', error);
-    } finally {
-      // setIsCallLoading(false);
+      console.error('Failed to initiate audio call:', error);
+    }
+  };
+
+  const handleVideoCall = async () => {
+    try {
+      await initiateCallFromContext(chat, 'video', user, api, updateChat, navigation);
+    } catch (error) {
+      console.error('Failed to initiate video call:', error);
     }
   };
 
 
-  const handleAudioCall = () => {
-    // Implement audio call functionality
-    // Alert.alert('Audio Call', `Calling ${chatInfo.name}...`);
-    initiateCall('audio');
+
+  const handleJoinCall = () => {
+    // Use the context's joinCall function which includes callId and proper state
+    joinCallFromContext(chat, navigation, user);
   };
-
-  const handleVideoCall = () => {
-    // Implement video call functionality
-    // Alert.alert('Video Call', `Starting video call with ${chatInfo.name}...`);
-    initiateCall('video')
-  };
-
-
-
-  const joinCall = async data => {
-    
-    navigate('CALL', {
-      chatId: data.chatId,
-      cameraStatus: data.cameraStatus,
-      microphoneStatus: data.microphoneStatus,
-    });
-    return false;
-  };
-
-  const toggleSelectMode = () => {
-    setIsSelectMode(false);
-  }
 
   return (
     <View style={styles.header}>
-      {
-        !isSelectMode &&
+      {/* Normal Mode - Back Button */}
+      {!isSelectMode && (
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigate(`TAB`)}
         >
           <Ionicons name="arrow-back" size={24} color="#333333" />
         </TouchableOpacity>
-      }
+      )}
 
-      <TouchableOpacity
-        style={styles.contactInfo}
-        onPress={() =>
-          chatInfo?.isGroupChat
-            ? navigate('CHAT_SETTINGS', { id: chatInfo?.chatId })
-            : navigate('CONTACT', { id: chat?.users[0]._id, chat })
-        }
-      >
-        <CustomImageView
-          source={`${BASE_API_URL}/image/${chatInfo?.avatar}`}
-          firstName={chatInfo?.name}
-          size={40}
-          fontSize={20}
-        />
-        <View style={styles.contactTextInfo}>
-          <Text style={styles.contactName}>{chatInfo?.name}</Text>
-          <Text style={styles.contactStatus}>
-            {chatInfo?.status}
+      {/* Select Mode - Close Button */}
+      {isSelectMode && (
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={onCancelSelect}
+        >
+          <Ionicons name="close" size={24} color="#333333" />
+        </TouchableOpacity>
+      )}
+
+      {/* Contact Info or Selection Count */}
+      {!isSelectMode ? (
+        <TouchableOpacity
+          style={styles.contactInfo}
+          onPress={() =>
+            chatInfo?.isGroupChat
+              ? navigate('CHAT_SETTINGS', { id: chatInfo?.chatId })
+              : navigate('CONTACT', { id: chat?.users[0]._id, chat })
+          }
+        >
+          <CustomImageView
+            source={`${BASE_API_URL}/image/${chatInfo?.avatar}`}
+            firstName={chatInfo?.name}
+            size={40}
+            fontSize={20}
+          />
+          <View style={styles.contactTextInfo}>
+            <Text style={styles.contactName}>{chatInfo?.name}</Text>
+            <Text style={styles.contactStatus} numberOfLines={1}>
+              {headerSubtitle}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.contactInfo}>
+          <Text style={styles.contactName}>
+            {selectedCount} selected
           </Text>
         </View>
-      </TouchableOpacity>
+      )}
 
-      {
-        !isSelectMode && <View style={styles.headerActions}>
-          {
-            !chat?.ongoingCall && <>
+      {/* Normal Mode Actions */}
+      {!isSelectMode && (
+        <View style={styles.headerActions}>
+          {!chat?.ongoingCall && (
+            <>
               <TouchableOpacity
                 style={styles.headerButton}
                 onPress={handleAudioCall}
@@ -140,33 +119,35 @@ export default function ChatHeader({ chatInfo, chat, isSelectMode, setIsSelectMo
                 <Ionicons name="videocam-outline" size={22} color="#333" />
               </TouchableOpacity>
             </>
-          }
+          )}
 
-          {
-            chat?.ongoingCall &&
-            <TouchableOpacity style={[
-              styles.headerButton,
-              styles.joinButton]}
-              onPress={() => {
-                joinCall({
-                  chatId: chat?._id,
-                  cameraStatus: false,
-                  microphoneStatus: false,
-                });
-              }}>
+          {chat?.ongoingCall && (
+            <TouchableOpacity
+              style={[styles.headerButton, styles.joinButton]}
+              onPress={handleJoinCall}
+            >
               <Text style={styles.joinButtonText}>Rejoindre</Text>
             </TouchableOpacity>
-          }
+          )}
         </View>
-      }
+      )}
 
-      {
-        isSelectMode && <View style={styles.headerActions}>
-          <TouchableOpacity onPress={toggleSelectMode}>
-            <Text style={styles.headerButton}>Annuler</Text>
+      {/* Select Mode Actions */}
+      {isSelectMode && (
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={onDeleteSelected}
+            disabled={selectedCount === 0}
+          >
+            <Ionicons
+              name="trash-outline"
+              size={22}
+              color={selectedCount > 0 ? '#FF3B30' : '#ccc'}
+            />
           </TouchableOpacity>
         </View>
-      }
+      )}
     </View>
   )
 }

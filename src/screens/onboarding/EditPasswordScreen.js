@@ -65,7 +65,7 @@ export default function EditPasswordScreen({route, navigation}) {
 
   return (
     <Screen>
-      <Header />
+      <Header isLeftImage={false} />
       <KeyboardAvoidingView
         style={{flex: 1, margin: moderateScale(16)}}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>

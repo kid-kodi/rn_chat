@@ -7,7 +7,7 @@ import PushNotification from 'react-native-push-notification';
 import PushNotificationIOS from '@react-native-community/push-notification-ios';
 import IncomingCall from 'react-native-incoming-call';
 import DeviceInfo from 'react-native-device-info';
-import { navigate } from '../utils/RootNavigation';
+import { navigate, navigationRef } from '../utils/RootNavigation';
 import axiosInstance from '../utils/AxiosInstance';
 
 // import CallKeep from 'react-native-callkeep';
@@ -190,9 +190,19 @@ export const handleIncomingCall = async (callData) => {
         'Appel Entrant', // Info text
         20000 // Timeout for end call after 20s
       );
-      DeviceEventEmitter.addListener('endCall', payload => {
-        // End call action here
-        console.log('endCall', payload);
+      DeviceEventEmitter.addListener('endCall', async payload => {
+        // Decline call action here
+        console.log('endCall (declined)', payload);
+        try {
+          // Call backend API to decline the call
+          await axiosInstance.post('/api/call/respond', {
+            callId: call_id,
+            response: 'declined'
+          });
+          console.log('✅ Call declined successfully');
+        } catch (error) {
+          console.error('❌ Error declining call:', error);
+        }
       });
       DeviceEventEmitter.addListener('answerCall', payload => {
         // Start call action here
@@ -418,14 +428,63 @@ export const unregisterDevice = async () => {
   }
 };
 
-export const configureNotifications = (onNotificationHandler) => {
+// export const configureNotifications = (onNotificationHandler) => {
+//   // Configure react-native-push-notification (existing code)
+//   PushNotification.configure({
+//     onNotification: function (notification) {
+//       console.log('NOTIFICATION:', notification);
+//       if (onNotificationHandler && typeof onNotificationHandler === 'function') {
+//         onNotificationHandler(notification);
+//       }
+//       if (Platform.OS === 'ios') {
+//         notification.finish(PushNotificationIOS.FetchResult.NoData);
+//       }
+//     },
+//     onRegister: function (tokenData) {
+//       console.log('TOKEN:', tokenData);
+//     },
+//     popInitialNotification: true,
+//     requestPermissions: Platform.OS === 'ios',
+//     permissions: {
+//       alert: true,
+//       badge: true,
+//       sound: true,
+//     },
+//   });
+
+//   // Notifee foreground event handler - only handle presses
+//   notifee.onForegroundEvent(({ type, detail }) => {
+//     if (type === EventType.PRESS) {
+//       console.log('Notification pressed:', detail.notification);
+//       if (detail.notification?.data?.chatId) {
+//         navigate('CHAT', { chatId: detail.notification.data.chatId });
+//       }
+//       if (onNotificationHandler) {
+//         onNotificationHandler(detail.notification);
+//       }
+//     }
+//   });
+
+//   // Handle initial notification (app launched from notification)
+//   notifee.getInitialNotification().then(notification => {
+//     if (notification?.data?.chatId) {
+//       navigate('CHAT', { chatId: notification.data.chatId });
+//     }
+//   });
+
+//   // Create notification channels for Android
+//   if (Platform.OS === 'android') {
+//     createNotificationChannels();
+//   }
+// };
+
+export const configureNotifications = () => {
   // Configure react-native-push-notification (existing code)
   PushNotification.configure({
     onNotification: function (notification) {
       console.log('NOTIFICATION:', notification);
-      if (onNotificationHandler && typeof onNotificationHandler === 'function') {
-        onNotificationHandler(notification);
-      }
+      handleNotification(notification);
+      
       if (Platform.OS === 'ios') {
         notification.finish(PushNotificationIOS.FetchResult.NoData);
       }
@@ -519,3 +578,44 @@ export const updateBadgeCount = async (manualCount = null) => {
     PushNotification.setApplicationIconBadgeNumber(count);
   }
 };
+
+
+
+const handleNotification = (notification) => {
+    const data = Platform.OS === 'ios' ? notification.data : notification.data;
+
+    // Different handling based on notification type
+    if (data.type === 'call') {
+      // Handle user responding to call notification
+      // handleCallAction(data);
+
+      if (data.action === 'accept') {
+        // Navigate to call screen
+        navigate('CALL', {
+          callData,
+          isIncoming: true
+        });
+      } else {
+        // Reject call - notify server
+        console.log('Call rejected:', data.call_id);
+        // Call your API to reject the call
+        // rejectCall(callData.call_id);
+      }
+
+    } else {
+      // Regular notification - navigate to the appropriate screen
+      // handleDeepLinking(data);
+
+      if (!navigationRef.current) return;
+
+      if (data.chatId) {
+        // Navigate to specific chat
+        console.log('Navigate to chat:', data.chatId);
+        navigate('CHAT', { chatId: data.chatId });
+      } else if (data.screen) {
+        // Navigate to a specific screen
+        console.log('Navigate to screen:', data.screen);
+        navigate(data.screen, data.params);
+      }
+    }
+  };

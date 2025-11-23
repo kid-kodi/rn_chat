@@ -1,80 +1,70 @@
-import React from 'react';
-import { Modal, View, StyleSheet, TouchableOpacity, Text, Dimensions } from 'react-native';
+import { Modal, View, StyleSheet } from 'react-native';
 
-const CustomModal = ({ visible, onClose, children }) => {
+const CustomModal = ({
+  isVisible,
+  onClose,
+  children,
+  containerStyle,
+  backdropOpacity = 0.5,
+  animationIn = 'slideInUp',
+  animationOut = 'slideOutDown',
+  backdropTransitionOutTiming = 300,
+  animationInTiming = 300,
+  animationOutTiming = 300,
+}) => {
   return (
     <Modal
-      animationType="slide"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
+      isVisible={isVisible}
+      onBackdropPress={onClose}
+      onBackButtonPress={onClose}
+      backdropOpacity={backdropOpacity}
+      animationIn={animationIn}
+      animationOut={animationOut}
+      backdropTransitionOutTiming={backdropTransitionOutTiming}
+      animationInTiming={animationInTiming}
+      animationOutTiming={animationOutTiming}
+      useNativeDriver
+      style={styles.modal}
+      statusBarTranslucent
     >
-      <View style={styles.modalOverlay}>
-        <TouchableOpacity style={styles.overlayTouchable} onPress={onClose} />
-
-        <View style={styles.modalContent}>
-          {/* Optional drag handle */}
-          {children}
-        </View>
+      <View style={[styles.container, containerStyle]}>
+        <View style={styles.handle} />
+        {children}
       </View>
     </Modal>
   );
 };
 
-const { height } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end', // Align content to bottom
-    backgroundColor: 'rgba(0,0,0,0.5)', // Semi-transparent overlay
+  modal: {
+    margin: 0,
+    justifyContent: 'flex-end',
   },
-  overlayTouchable: {
-    flex: 1,
+  container: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: moderateScale(24),
+    borderTopRightRadius: moderateScale(24),
+    padding: moderateScale(20),
+    paddingTop: moderateScale(12),
+    minHeight: moderateScale(100),
+    shadowColor: Colors.text,
+    shadowOffset: {
+      width: 0,
+      height: -4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  modalContent: {
-    height: height * 0.98, // 90% of screen height
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5, // Android shadow
-  },
-  dragHandle: {
-    width: 40,
-    height: 5,
-    backgroundColor: '#ccc',
-    borderRadius: 2.5,
+  handle: {
+    width: moderateScale(40),
+    height: moderateScale(4),
+    backgroundColor: Colors.textSecondary,
+    opacity: 0.3,
+    borderRadius: moderateScale(2),
     alignSelf: 'center',
-    marginVertical: 8,
+    marginBottom: moderateScale(16),
   },
 });
 
 export default CustomModal;
-
-// usage
-
-// import React, { useState } from 'react';
-// import { View, Button, Text } from 'react-native';
-// import CustomModal from './CustomModal';
-
-// const App = () => {
-//   const [isModalVisible, setModalVisible] = useState(false);
-
-//   return (
-//     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-//       <Button title="Open Bottom Modal" onPress={() => setModalVisible(true)} />
-      
-//       <CustomModal visible={isModalVisible} onClose={() => setModalVisible(false)}>
-//         <Text style={{ fontSize: 18, marginBottom: 20 }}>This is a 90% Bottom Modal 🚀</Text>
-//         <Button title="Close" onPress={() => setModalVisible(false)} />
-//       </CustomModal>
-//     </View>
-//   );
-// };
-
-// export default App;

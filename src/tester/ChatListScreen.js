@@ -1,3 +1,25 @@
+/*
+ * ChatListScreen
+ *
+ * Usage:
+ *   <ChatListScreen navigation={navigation} />
+ *
+ * Params:
+ *   - navigation: React Navigation prop for navigating to other screens (required).
+ *
+ * Features:
+ *   - Displays a list of chats (active/archived) with search and filter options.
+ *   - Tap a chat to open its detail screen (if not in selection mode).
+ *   - Long-press a chat to enter selection mode; tap more chats to select/deselect.
+ *   - When one or more chats are selected, a delete bar appears at the top.
+ *   - Tap the delete button to remove all selected chats from the list.
+ *   - Selection is cleared after deletion or when no chats are selected.
+ *
+ * Notes:
+ *   - The chat data is managed locally in this component (mock data).
+ *   - Selection state is tracked in the selectedChats array (by chat id).
+ *   - The component is designed for demonstration/testing and can be adapted for real data sources.
+ */
 import React, { useState } from 'react';
 import {
   View,
@@ -21,6 +43,11 @@ const ChatListScreen = ({ navigation }) => {
   const [filterVisible, setFilterVisible] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  // Add state for selected chats
+  const [selectedChats, setSelectedChats] = useState([]);
+  // Add state for chat data (so we can delete)
+  const [activeChatsData, setActiveChatsData] = useState(activeChats);
+  const [archivedChatsData, setArchivedChatsData] = useState(archivedChats);
 
   // Filters
   const [filters, setFilters] = useState({
@@ -31,7 +58,7 @@ const ChatListScreen = ({ navigation }) => {
 
   // Apply filters to chat list
   const getFilteredChats = () => {
-    let filteredList = activeTab === 'chats' ? activeChats : archivedChats;
+    let filteredList = activeTab === 'chats' ? activeChatsData : archivedChatsData;
 
     if (filters.unreadOnly) {
       filteredList = filteredList.filter(chat => chat.unread > 0);
@@ -71,46 +98,85 @@ const ChatListScreen = ({ navigation }) => {
     });
   };
 
+  // Toggle selection of a chat item
+  const toggleSelectChat = (chatId) => {
+    setSelectedChats((prev) =>
+      prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId]
+    );
+  };
+
+  // Delete selected chats
+  const deleteSelectedChats = () => {
+    if (activeTab === 'chats') {
+      setActiveChatsData(prev => prev.filter(chat => !selectedChats.includes(chat.id)));
+    } else {
+      setArchivedChatsData(prev => prev.filter(chat => !selectedChats.includes(chat.id)));
+    }
+    setSelectedChats([]);
+  };
+
   // Render chat item
-  const renderChatItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.chatItem}
-      onPress={() => navigation.navigate('ChatDetail', { chatId: item.id, name: item.name })}
-    >
-      <View style={styles.avatarContainer}>
-        <Image source={{ uri: item.avatar }} style={styles.avatar} />
-        {item.isOnline && <View style={styles.onlineIndicator} />}
-        {item.isGroup && (
-          <View style={styles.groupIndicator}>
-            <Text style={styles.groupCount}>{item.participants}</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.chatContent}>
-        <View style={styles.chatHeader}>
-          <Text style={styles.chatName}>{item.name}</Text>
-          <Text style={styles.chatTime}>{item.time}</Text>
-        </View>
-        <View style={styles.messageRow}>
-          <Text
-            style={[styles.chatMessage, item.unread > 0 && styles.unreadMessage]}
-            numberOfLines={1}
-          >
-            {item.lastMessage}
-          </Text>
-          {item.unread > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>{item.unread}</Text>
+  const renderChatItem = ({ item }) => {
+    const isSelected = selectedChats.includes(item.id);
+    return (
+      <TouchableOpacity
+        style={[styles.chatItem, isSelected && styles.selectedChatItem]}
+        onPress={() => {
+          if (selectedChats.length > 0) {
+            toggleSelectChat(item.id);
+          } else {
+            navigation.navigate('ChatDetail', { chatId: item.id, name: item.name });
+          }
+        }}
+        onLongPress={() => toggleSelectChat(item.id)}
+      >
+        <View style={styles.avatarContainer}>
+          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          {item.isOnline && <View style={styles.onlineIndicator} />}
+          {item.isGroup && (
+            <View style={styles.groupIndicator}>
+              <Text style={styles.groupCount}>{item.participants}</Text>
             </View>
           )}
+          {/* Selection indicator */}
+          {isSelected && <View style={styles.selectedOverlay}><Ionicons name="checkmark-circle" size={24} color={Colors.primary} /></View>}
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+        <View style={styles.chatContent}>
+          <View style={styles.chatHeader}>
+            <Text style={styles.chatName}>{item.name}</Text>
+            <Text style={styles.chatTime}>{item.time}</Text>
+          </View>
+          <View style={styles.messageRow}>
+            <Text
+              style={[styles.chatMessage, item.unread > 0 && styles.unreadMessage]}
+              numberOfLines={1}
+            >
+              {item.lastMessage}
+            </Text>
+            {item.unread > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadCount}>{item.unread}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
+      {/* Delete Button (visible if any selected) */}
+      {selectedChats.length > 0 && (
+        <View style={styles.deleteBar}>
+          <Text style={styles.selectedCount}>{selectedChats.length} selected</Text>
+          <TouchableOpacity onPress={deleteSelectedChats} style={styles.deleteButton}>
+            <Ionicons name="trash" size={24} color="#fff" />
+            <Text style={styles.deleteButtonText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Custom Header */}
       <View style={styles.customHeader}>
@@ -228,6 +294,7 @@ const ChatListScreen = ({ navigation }) => {
         data={getFilteredChats()}
         renderItem={renderChatItem}
         keyExtractor={item => item.id}
+        extraData={selectedChats}
         contentContainerStyle={styles.chatList}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -516,6 +583,41 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
+  },
+  selectedChatItem: {
+    backgroundColor: '#e0e7ff',
+  },
+  selectedOverlay: {
+    position: 'absolute',
+    top: -8,
+    left: -8,
+    zIndex: 2,
+  },
+  deleteBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  selectedCount: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#d32f2f',
+    paddingHorizontal: 15,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  deleteButtonText: {
+    color: '#fff',
+    marginLeft: 8,
+    fontWeight: 'bold',
   },
 });
 
